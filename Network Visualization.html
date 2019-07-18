@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <script src="https://dglittle.github.io/cdn/random001.js"></script>
+        <script src="https://dglittle.github.io/cdn/utils004.js"></script>
+        <script src="./sync9.js"></script>
+        <script src="./sync9_peer.js"></script>
+        <script src="https://d3js.org/d3.v5.min.js"></script>
+
+        <script>
+        function begin() {
+            var nodes = [];
+            var links = [];
+            function update_links(peers) {
+                nodes = Object.keys(peers).map(x => {return {id: x}})
+                links = [];
+                var seen_peers = new Set();
+                function add_links(peer) {
+                    if (seen_peers.has(peer))
+                        return;
+                    seen_peers.add(peer);
+                    for (var link of Object.keys(peers[peer].peers)) {
+                        links.push({source: peer, target: link})
+                        add_links(link)
+                    }
+                }
+                add_links(Object.keys(peers)[0]);
+
+                simulation.nodes(nodes);
+                simulation.force("link").links(links);
+            }
+
+            const svg = d3.select("svg"),
+                width = +svg.attr("width"),
+                height = +svg.attr("height");
+
+            const simulation = d3.forceSimulation()
+                .force("link", d3.forceLink(links).id(d => d.id))
+                .force("charge", d3.forceManyBody())
+                .force("center", d3.forceCenter(width / 2, height / 2))
+            
+            const link = svg.append("g")
+                .attr("stroke", "#999")
+                .attr("stroke-opacity", 0.6)
+                .selectAll("line")
+                .data(links)
+                .join("line");
+            
+            const node = svg.append("g")
+                .attr("stroke", "#fff")
+                .attr("stroke-width", 1.5)
+                .selectAll("circle")
+                .data(nodes)
+                ;//.join("circle")
+                //.attr("r", 5)
+                //.attr("fill", color);
+            
+            simulation.on("tick", () => {
+                link
+                    .attr("x1", d => d.source.x)
+                    .attr("y1", d => d.source.y)
+                    .attr("x2", d => d.target.x)
+                    .attr("y2", d => d.target.y);
+
+                node
+                    .attr("cx", d => d.x)
+                    .attr("cy", d => d.y);
+            });
+
+            run_trial("Seed!", false, 100, update_links);
+        }
+        function run_trial(seed, show_debug, timing, frame_callback) {
+            Math.randomSeed(seed)
+            var rand = () => Math.random()
+            
+            var debug_frames = []
+
+            var n_peers = 3
+            var peers = {}
+            for (var i = 0; i < n_peers; i++) {
+                ;(() => {
+                    var p = sync9_create_peer({
+                        get: (pid, id) => {
+                            if (show_debug) console.log('SEND: ' + pid + ' get ' + id)
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' get ' + id)
+                                peers[pid].get(p.uid, id)
+                            }])
+                        },
+                        set: (pid, vid, parents, changes) => {
+                            if (show_debug) console.log('SEND: ' + pid + ' set')
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' set')
+                                peers[pid].set(p.uid, vid, parents, changes)
+                            }])
+                        },
+                        set_multi: (pid, vs, fs) => {
+                            fs = Object.assign({}, fs)
+                            if (show_debug) console.log('SEND: ' + pid + ' set_multi')
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' set_multi')
+                                peers[pid].set_multi(p.uid, vs, fs)
+                            }])
+                        },
+                        ack: (pid, vid) => {
+                            if (show_debug) console.log('SEND: ' + pid + ' ack ' + vid)
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' ack ' + vid)
+                                peers[pid].ack(p.uid, vid)
+                            }])
+                        },
+                        full_ack: (pid, vid) => {
+                            if (show_debug) console.log('SEND: ' + pid + ' full_ack ' + vid)
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' full_ack ' + vid)
+                                peers[pid].full_ack(p.uid, vid)
+                            }])
+                        },
+                        fissure: (pid, fissure) => {
+                            if (show_debug) console.log('SEND: ' + pid + ' fissure')
+                            peers[pid].incoming.push([p.uid, () => {
+                                if (show_debug) console.log('RECV: ' + pid + ' fissure')
+                                peers[pid].fissure(p.uid, fissure)
+                            }])
+                        }
+                    })
+                    p.incoming = []
+                    peers[p.uid] = p
+                    
+                    if (i == 0) {
+                        p.letters = 'abcdefghijklmnopqrstuvwxyz'
+                        for (var ii = 0; ii < 100; ii++) {
+                            p.letters += String.fromCharCode(12032 + ii)
+                        }
+                        p.letters_i = 0
+                    } else {
+                        p.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                        for (var ii = 0; ii < 100; ii++) {
+                            p.letters += String.fromCharCode(12032 + 100 + ii)
+                        }
+                        p.letters_i = 0
+                    }
+                })()
+            }
+            var peers_array = Object.values(peers)
+            
+            for (var p1 = 0; p1 < n_peers; p1++) {
+                for (var p2 = p1 + 1; p2 < n_peers; p2++) {
+                    if (!peers_array[p1].peers[peers_array[p2].uid]) {
+                        peers_array[p1].connect(peers_array[p2].uid)
+                        peers_array[p2].connect(peers_array[p1].uid)
+                    }
+                }
+            }
+            
+            function tick() {
+
+                var i = Math.floor(rand() * n_peers)
+                var p = peers_array[i]
+                
+                if (rand() < 0.1) {
+                    if (rand() < 0.9) {
+                        if (p.letters_i >= p.letters.length) {
+                            p.letters_i = 0
+                        }
+                        var e = create_random_edit(p.s9, p.letters[p.letters_i++])
+                        p.local_set(e.vid, e.parents, e.changes)
+                    } else {
+                        var other_p = p
+                        while (other_p == p) {
+                            other_p = peers_array[Math.floor(rand() * n_peers)]
+                        }
+                        if (p.peers[other_p.uid]) {
+                            p.disconnect(other_p.uid)
+                            p.incoming = p.incoming.filter(x => x[0] != other_p.uid)
+                            other_p.disconnect(p.uid)
+                            other_p.incoming = other_p.incoming.filter(x => x[0] != p.uid)
+                        } else {
+                            p.connect(other_p.uid)
+                            other_p.connect(p.uid)
+                        }
+                    }
+                } else {
+                    if (show_debug) console.log('process incoming')
+                    var did_something = false
+                    if (p.incoming.length > 0) {
+                        did_something = true
+                        p.incoming.shift()[1]()
+                    }
+                    if (!did_something) {
+                        if (show_debug) console.log('did nothing')
+                    }
+                }
+                
+                if (show_debug)
+                    console.log('peer: ' + p.uid + ' -> ' + JSON.stringify(sync9_read(p.s9)))
+                frame_callback(peers)
+                setTimeout(tick, timing);
+            }
+            tick();
+        }
+        function create_random_edit(s, letters) {
+            letters = letters || 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+            var str = sync9_read(s)
+            var start = Math.floor(Math.random() * (str.length + 1))
+            var del = Math.floor(Math.random() * Math.random() * (str.length - start + 1))
+            var ins = letters[Math.floor(Math.random() * letters.length)].repeat(Math.floor(Math.random() * 4) + (del == 0 ? 1 : 0))
+            
+            var vid = sync9_guid()
+            var changes = [`[${start}:${start + del}] = ` + JSON.stringify(ins)]
+            
+            return {
+                vid : vid,
+                parents : Object.assign({}, s.leaves),
+                changes : changes
+            }
+        }
+        if (document.readyState === "complete" ||
+            (document.readyState !== "loading" && !document.documentElement.doScroll)) {
+            begin();
+        } else {
+            document.addEventListener("DOMContentLoaded", begin);
+        }
+        </script>
+    </head>
+    <body>
+        <svg width=800 height=500></svg>
+    </body>
+</html>
