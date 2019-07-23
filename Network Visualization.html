@@ -13,8 +13,9 @@
         function begin() {
             var nodes = [];
             var links = [];
+            const timing = 50;
             var trial = new Trial({
-                timing: 50,
+                timing: timing,
                 peers: 6});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
@@ -43,13 +44,13 @@
                 links = [];
                 // Let's traverse the graph
                 // Keep track of what we've seen
-                var seen_peers = new Set();
+                let seen_peers = new Set();
                 // Recursively explore the graph
                 function add_links(peer) {
                     if (seen_peers.has(peer))
                         return;
                     seen_peers.add(peer);
-                    for (var link of Object.keys(peers[peer].peers)) {
+                    for (let link of Object.keys(peers[peer].peers)) {
                         links.push({source: peer, target: link})
                         add_links(link)
                     }
@@ -70,7 +71,7 @@
                 // Update graphics handles creating and deleting SVG elements
                 if (nodes.length != nodes_old_len || links.length != links_old_len) {
                     update_graphics();
-                    simulation.alpha(0.15).restart();
+                    simulation.alpha(0.2).restart();
                 }
             }
             /* When we get an edit, mark "edit time" on the peer that made it */
@@ -91,12 +92,24 @@
                 node = node.enter()
                                .append("circle")
                                    .attr("r", 7)
+                                   .call(d3.drag()
+                                       .on("start", dragstarted)
+                                       .on("drag", dragged)
+                                       .on("end", dragended))
                                .merge(node);
 
                 // Bind links, remove deleted, and add new.
                 link = link.data(links, d => d.source.id + "-" + d.target.id);
                 link.exit().remove();
-                link = link.enter().append("line").merge(link);
+                link = link.enter()
+                               .append(() => {
+                                   let group = document.createElementNS("http://www.w3.org/2000/svg","g");
+                                   let back = document.createElementNS("http://www.w3.org/2000/svg","line");
+                                   let front = document.createElementNS("http://www.w3.org/2000/svg","line");
+                                   group.append(back, front);
+                                   return group;
+                               })
+                            .merge(link);
             }
 
             function tick() {
@@ -128,17 +141,15 @@
             var size = Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight);
             const svg = d3.select("svg")
                           .attr("width", size)
-                          .attr("height", size)
+                          .attr("height", size);
             
             var link = svg.append("g")
-                          .attr("stroke", "#ccc")
-                          .attr("stroke-width", 2.5)
-                          .selectAll(),
+                          .classed("links", true)
+                        .selectAll("line"),
 
                 node = svg.append("g")
                           .attr("stroke-width", 2)
-                          .selectAll()
-                          
+                        .selectAll("circle");
 
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
@@ -154,6 +165,8 @@
             simulation.on("tick", () => {
                 // Move the nodes and lines
                 link
+                  .selectAll("line")
+                  .data(d => [d, d])
                     .attr("x1", d => d.source.x)
                     .attr("y1", d => d.source.y)
                     .attr("x2", d => d.target.x)
@@ -162,6 +175,23 @@
                     .attr("cx", d => d.x)
                     .attr("cy", d => d.y);
             });
+            
+            function dragstarted(d) {
+                if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+                d.fx = d.x;
+                d.fy = d.y;
+            }
+
+            function dragged(d) {
+                d.fx = d3.event.x;
+                d.fy = d3.event.y;
+            }
+
+            function dragended(d) {
+                if (!d3.event.active) simulation.alphaTarget(0);
+                d.fx = null;
+                d.fy = null;
+            }
         }
         
         if (document.readyState === "complete" ||
@@ -181,9 +211,18 @@
                 align-items: center;
                 background: #222;
             }
+            .links > g > line:first-child {
+                stroke: rgba(30, 30, 30, 0.5);
+                stroke-width: 5;
+            }
+            .links > g > line:last-child {
+                stroke: #ccc;
+                stroke-width: 2.5;
+            }
         </style>
     </head>
     <body>
-        <svg></svg>
+        <svg>
+        </svg>
     </body>
 </html>
