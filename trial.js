@@ -101,6 +101,7 @@ class Trial {
                 }
                 var e = this.create_random_edit(p.s9, p.letters[p.letters_i++])
                 p.local_set(e.vid, e.parents, e.changes)
+                this.emit("edit", p.uid, e)
             } else {
                 var other_p = p
                 while (other_p == p) {
@@ -115,6 +116,7 @@ class Trial {
                     p.connect(other_p.uid)
                     other_p.connect(p.uid)
                 }
+                this.emit("topology", this.peers)
             }
         } else {
             if (this.debug) console.log('process incoming')
@@ -131,8 +133,7 @@ class Trial {
         if (this.debug)
             console.log('peer: ' + p.uid + ' -> ' + JSON.stringify(sync9_read(p.s9)))
 
-        if (this.events["tick"])
-            this.events["tick"](this.peers);
+        this.emit("tick", this.peers)
         
         setTimeout(() => this._tick(), this.timing);
     }
@@ -159,10 +160,14 @@ class Trial {
     }
 
     on(event, handler) {
-        if (!["tick"].includes(event))
+        if (!["tick", "topology", "edit"].includes(event))
             throw "Unknown Event"
-
         this.events[event] = handler
+    }
+
+    emit(event, ...args) {
+        if (this.events[event])
+            this.events[event](...args);
     }
 
 }
