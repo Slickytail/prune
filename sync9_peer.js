@@ -230,6 +230,46 @@ function sync9_create_peer(p_funcs) {
         var q = (a, b) => !frozen[a] && !frozen[b] && (tags[a].tag == tags[b].tag)
         sync9_prune2(self.s9, q, q)
     }    
+
+    self.v_state = () => {
+        var tags = {}
+        var frozen = {root: true}
+        Object.keys(self.s9.T).forEach(vid => {
+            tags[vid] = {tags: {}}
+        })
+        function tag(vid, t) {
+            if (!tags[vid].tags[t]) {
+                tags[vid].tags[t] = true
+                Object.keys(self.s9.T[vid]).forEach(vid => tag(vid, t))
+            }
+        }
+        Object.entries(self.fissures).forEach(x => {
+            Object.keys(x[1].top).forEach(v => tag(v, x[0]))
+            Object.keys(x[1].top).forEach(v => frozen[v] = true)
+            function freeze(vid) {
+                if (tags[vid].tags[x[0]]) return
+                frozen[vid] = true
+                Object.keys(self.s9.T[vid]).forEach(freeze)
+            }
+            Object.keys(x[1].bottom).forEach(freeze)
+        })
+        Object.keys(self.full_ack_leaves).forEach(v => tag(v, '_full_ack'))
+        Object.keys(self.full_ack_leaves).forEach(v => frozen[v] = true)
+        Object.entries(tags).forEach(x => {
+            var keys = Object.keys(x[1].tags)
+            if (keys.length == 0) {
+                frozen[x[0]] = true
+            } else if (!frozen[x[0]]) {
+                x[1].tag = keys.sort().join(',')
+            }
+        })
+        return function(a) {
+            return {
+                frozen: frozen[a] || false,
+                acked: tags[a].tags['_full_ack'] || false
+            }
+        }
+    }    
     
     return self
 }

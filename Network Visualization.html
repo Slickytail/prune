@@ -6,6 +6,7 @@
         <script src="https://dglittle.github.io/cdn/random001.js"></script>
         <script src="https://dglittle.github.io/cdn/utils004.js"></script>
         <script src="https://d3js.org/d3.v5.min.js"></script>
+        <script src="https://unpkg.com/d3-dag@0.2.6"></script>
         <script src="./sync9.js"></script>
         <script src="./sync9_peer.js"></script>
         <script src="./trial.js"></script>
@@ -13,25 +14,28 @@
         function begin() {
             var nodes = [];
             var links = [];
-            const timing = 50;
+            const size = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
+                Math.min(document.documentElement.clientWidth/2, document.documentElement.clientHeight) :
+                Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight/2);
             var trial = new Trial({
-                timing: timing,
-                peers: 6});
+                timing: 50,
+                peers: 5});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
             trial.begin();
 
             /* Recompute nodes and links when they get changed (ie, on the topology event) */
             function update_links(peers) {
+                net_peers = peers;
                 // Note the current number of links and nodes to see if they change.
                 // The event should fire after a single change so we should never miss a change due to counting
                 let nodes_old_len = nodes.length;
                 let links_old_len = links.length;
                 // Copy over the old nodes' locations so that we can update seamlessly
-                let nodes_new = Object.keys(peers).map(vid => {
-                    let node = {id: vid}
+                let nodes_new = Object.keys(peers).map(uid => {
+                    let node = {id: uid}
                     for (let peer of nodes) {
-                        if (peer.id === vid) {
+                        if (peer.id === uid) {
                             node.x = peer.x;
                             node.y = peer.y;
                             break;
@@ -91,11 +95,12 @@
                 // Add new nodes and draw circles on them
                 node = node.enter()
                                .append("circle")
-                                   .attr("r", 7)
+                                   .attr("r", 10)
                                    .call(d3.drag()
                                        .on("start", dragstarted)
                                        .on("drag", dragged)
                                        .on("end", dragended))
+                                    .on('mouseover', hoverOn)
                                .merge(node);
 
                 // Bind links, remove deleted, and add new.
@@ -112,14 +117,83 @@
                             .merge(link);
             }
 
-            function tick() {
+            function draw_dag(d) {
+                // Get the timedag of the peer
+                let pe = trial.peers[d.id];
+                let x = pe.v_state();
+                let timedag_data = pe.s9.T;
+                let timedag = Object.entries(timedag_data)
+                    .map(([k, v]) => {
+                        return {id: k, parentIds: Object.keys(v)};
+                    });
+                let dag = d3.dagStratify()(timedag);
+                let layout = d3.sugiyama()
+                    .size([size-50, size-50])
+                    .layering(d3.layeringLongestPath())
+                    .decross(d3.decrossTwoLayer())
+                    .coord(d3.coordCenter());
+                layout(dag);
+                let svg = d3.select("svg.dag")
+                    .attr("width", size)
+                    .attr("height", size)
+                    .attr("viewBox", `${-25} ${-25} ${size} ${size}`);
+                svg.selectAll("*").remove();
+                
+                // How to draw edges
+                let line = d3.line()
+                    //.curve(d3.curveCatmullRom)
+                    .x(d => d.x)
+                    .y(d => d.y);
+                
+                // Plot edges
+                svg.append('g')
+                  .selectAll('path')
+                    .data(dag.links())
+                    .enter()
+                  .append('path')
+                    .attr('d', ({ data }) => line(data.points))
+                    .attr('fill', 'none')
+                    .attr('stroke-width', 3)
+                    .attr('stroke', "#ccc");
+                
+                let nodes = svg.append('g')
+                  .selectAll('g')
+                    .data(dag.descendants())
+                    .enter()
+                  .append('circle')
+                    .attr('r', 10)
+                    .attr('fill', ({id}) => {
+                        let z = x(id);
+                        if (z.frozen && z.acked)
+                            return "#f7e136"
+                        if (z.frozen)
+                            return "#8de4f7";
+                        if (z.acked)
+                            return "#42c260";
+                        return "#dadae0";
+                    })
+                    .attr("stroke-width", 3)
+                    .attr("stroke", "#4e6069")
+                    .attr('cx', ({id, x, y}) => x)
+                    .attr('cy', ({x, y}) => y);
+
+            }
+
+            var t_old = performance.now();
+            function tick(time) {
+                var elapsed = (time - t_old);
+                t_old = time;
+
                 // Draw edit blips
                 for (let n of nodes) {
-                    n.et = (n.et || 0) + 1
+                    if (n.et == null)
+                        n.et = Infinity;
+                    else
+                        n.et += elapsed;
                 }
                 let col = function (et) {
-                    let r = 200 * (1 - Math.exp(-0.05*et));
-                    let g = 120 * (1 - Math.exp(-0.1*et)) + 100;
+                    let r = 200 * (1 - Math.exp(et/-1000));
+                    let g = 120 * (1 - Math.exp(et/-500)) + 100;
                     let b = 240;
                     return {r: r, g: g, b: b}
                 }
@@ -127,29 +201,19 @@
                     let c = col(et);
                     return `rgb(${c.r},${c.g},${c.b})`
                 }
-                let s = function(et) {
-                    let c = col(et);
-                    return `rgb(${c.r * 0.6},${c.g * 0.5},${c.b * 0.4})`
+                let s = function(d) {
+                    let c = col(d.et);
+                    return d.selected ? 
+                        `rgb(181, 37, 194)` :
+                        `rgb(${c.r * 0.6},${c.g * 0.5},${c.b * 0.4})`;
+
                 }
                 node.attr("fill", d => f(d.et))
-                    .attr("stroke", d => s(d.et));
-                setTimeout(tick, 20);
+                    .attr("stroke", d => s(d));
+                
+                requestAnimationFrame(tick)
             }
-            setTimeout(tick);
-
-            // Somewhat boring d3 boilerplate
-            var size = Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight);
-            const svg = d3.select("svg")
-                          .attr("width", size)
-                          .attr("height", size);
-            
-            var link = svg.append("g")
-                          .classed("links", true)
-                        .selectAll("line"),
-
-                node = svg.append("g")
-                          .attr("stroke-width", 2)
-                        .selectAll("circle");
+            requestAnimationFrame(tick);
 
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
@@ -159,6 +223,19 @@
                                    .strength(-1500)
                                    .distanceMax(400))
                 .force("center", d3.forceCenter(size/2, size/2));
+            
+            // Somewhat boring d3 boilerplate
+            const svg = d3.select("svg.network")
+                          .attr("width", size)
+                          .attr("height", size);
+            
+            var link = svg.append("g")
+                          .classed("links", true)
+                        .selectAll("line"),
+
+                node = svg.append("g")
+                          .attr("stroke-width", 3)
+                        .selectAll("circle");
 
             update_links(trial.peers);
 
@@ -175,7 +252,7 @@
                     .attr("cx", d => d.x)
                     .attr("cy", d => d.y);
             });
-            
+             
             function dragstarted(d) {
                 if (!d3.event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
@@ -192,6 +269,20 @@
                 d.fx = null;
                 d.fy = null;
             }
+            
+            var dag = null;
+            trial.on("tick", (p) => {
+                if (dag && dag.id == p.uid)
+                    requestAnimationFrame(() => draw_dag(dag));
+            });
+            function hoverOn(d) {
+                if (dag)
+                    dag.selected = false;
+                d.selected = true;
+                dag = d;
+                requestAnimationFrame(() => draw_dag(dag));
+            }
+            
         }
         
         if (document.readyState === "complete" ||
@@ -205,6 +296,11 @@
             body {
                 padding: 0;
                 margin: 0;
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                left: 0;
+                right: 0;
                 overflow: hidden;
                 display: flex;
                 justify-content: center;
@@ -213,16 +309,18 @@
             }
             .links > g > line:first-child {
                 stroke: rgba(30, 30, 30, 0.5);
-                stroke-width: 5;
+                stroke-width: 6;
             }
+
             .links > g > line:last-child {
                 stroke: #ccc;
-                stroke-width: 2.5;
+                stroke-width: 4;
             }
+            
         </style>
     </head>
     <body>
-        <svg>
-        </svg>
+        <svg class="dag"></svg>
+        <svg class="network"></svg>
     </body>
 </html>

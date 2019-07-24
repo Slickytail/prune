@@ -94,8 +94,8 @@ class Trial {
         var i = Math.floor(this.rand() * this.n_peers)
         var p = this.peers_array[i]
         
-        if (this.rand() < 0.1) {
-            if (this.rand() < 0.9) {
+        if (this.rand() < 0.03) {
+            if (this.rand() < 1.9) {
                 if (p.letters_i >= p.letters.length) {
                     p.letters_i = 0
                 }
@@ -133,7 +133,7 @@ class Trial {
         if (this.debug)
             console.log('peer: ' + p.uid + ' -> ' + JSON.stringify(sync9_read(p.s9)))
 
-        this.emit("tick", this.peers)
+        this.emit("tick", p)
         
         setTimeout(() => this._tick(), this.timing);
     }
