@@ -3,6 +3,7 @@
     <head>
         <title>Peer-To-Peer Sync9</title>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
         <script src="https://dglittle.github.io/cdn/random001.js"></script>
         <script src="https://dglittle.github.io/cdn/utils004.js"></script>
         <script src="https://d3js.org/d3.v5.min.js"></script>
@@ -17,7 +18,7 @@
             const elw = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
                 document.documentElement.clientWidth/2 : document.documentElement.clientWidth;
             const elh = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
-                document.documentElement.clientHeight : document.documentElement.clientHeight/2;
+                document.documentElement.clientHeight - 50 : document.documentElement.clientHeight/2 - 25;
             EDIT_PROB = document.getElementById('edit_prob').value;
             CONNECT_PROB = document.getElementById('connect_prob').value;
             var trial = new Trial({
@@ -131,15 +132,18 @@
                     });
                 let dag = d3.dagStratify()(timedag);
                 let layout = d3.sugiyama()
-                    .size([elw-50, elh-50])
+                    .size([elw, elh])
                     .layering(d3.layeringLongestPath())
                     .decross(d3.decrossTwoLayer())
                     .coord(d3.coordCenter());
                 layout(dag);
+
+                const dag_ho = Math.max(0, 375 - elh);
+                const dag_wo = Math.max(0, 375 - elw);
                 let svg = d3.select("svg.dag")
                     .attr("width", elw)
                     .attr("height", elh)
-                    .attr("viewBox", `-25 -25 ${elw} ${elh}`);
+                    .attr("viewBox", `-${dag_wo + 25} -${dag_ho + 25} ${elw+2*(25 + dag_wo)} ${elh+2*(25 + dag_ho)}`);
                 svg.selectAll("g").remove();
                 
                 // How to draw edges
@@ -236,10 +240,12 @@
                 .force("center", d3.forceCenter(elw/2, elh/2));
             
             // Somewhat boring d3 boilerplate
+            const svg_ho = Math.max(0, 400 - elh);
+            const svg_wo = Math.max(0, 400 - elw);
             const svg = d3.select("svg.network")
                           .attr("width", elw)
                           .attr("height", elh)
-                          .attr("viewBox", `0 0 ${elw} ${elh}`);
+                          .attr("viewBox", `${-svg_wo} ${-svg_ho} ${elw+svg_wo*2} ${elh+svg_ho*2}`);
             
             var link = svg.append("g")
                           .classed("links", true)
@@ -315,6 +321,7 @@
             body {
                 padding: 0;
                 margin: 0;
+                padding-bottom: 50px;
                 position: absolute;
                 top: 0;
                 bottom: 0;
@@ -326,11 +333,6 @@
                 align-items: center;
                 background: var(--off-black);
             }
-            @media only screen and (max-aspect-ratio: 1/1) {
-                body {
-                    flex-direction: column;
-                }
-            }
             svg.network circle {
                 cursor: pointer;
             }
@@ -339,12 +341,14 @@
                 bottom: 10px;
                 right: 10px;
                 z-index: 10;
+                height: 50px;
             }
             .controls div {
                 display: flex;
                 justify-content: space-between;
                 opacity: 0.5;
                 transition: 0.15s opacity ease;
+                height: 50%;
             }
             .controls div:hover {
                 opacity: 1;
@@ -397,6 +401,27 @@
             }
             svg.dag .dag-version.fissured {
                 stroke: #942c2c;
+            }
+            @media screen and (max-aspect-ratio: 1/1) {
+                body {
+                    padding-bottom: 0;
+                }
+                body {
+                    flex-direction: column;
+                }
+                .controls {
+                    position: initial;
+                    width: 100%;
+                }
+                .controls div {
+                    padding-left: 5px;
+                    padding-right: 5px;
+                }
+            }
+            @media screen and (max-width: 400px) {
+                .controls label {
+                    font-size: 13px;
+                }
             }
         </style>
     </head>
