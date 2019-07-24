@@ -107,14 +107,14 @@
                 link = link.data(links, d => d.source.id + "-" + d.target.id);
                 link.exit().remove();
                 link = link.enter()
-                               .append(() => {
+                            .append(() => {
                                    let group = document.createElementNS("http://www.w3.org/2000/svg","g");
                                    let back = document.createElementNS("http://www.w3.org/2000/svg","line");
                                    let front = document.createElementNS("http://www.w3.org/2000/svg","line");
                                    group.append(back, front);
                                    return group;
                                })
-                            .merge(link);
+                                .merge(link);
             }
 
             function draw_dag(d) {
@@ -136,8 +136,8 @@
                 let svg = d3.select("svg.dag")
                     .attr("width", size)
                     .attr("height", size)
-                    .attr("viewBox", `${-25} ${-25} ${size} ${size}`);
-                svg.selectAll("*").remove();
+                    .attr("viewBox", `-25 -25 ${size} ${size}`);
+                svg.selectAll("g").remove();
                 
                 // How to draw edges
                 let line = d3.line()
@@ -151,31 +151,39 @@
                     .data(dag.links())
                     .enter()
                   .append('path')
-                    .attr('d', ({ data }) => line(data.points))
-                    .attr('fill', 'none')
-                    .attr('stroke-width', 3)
-                    .attr('stroke', "#ccc");
+                    .classed('dag-line', true)
+                    .attr('d', ({ data }) => line(data.points));
                 
                 let nodes = svg.append('g')
                   .selectAll('g')
                     .data(dag.descendants())
                     .enter()
                   .append('circle')
+                    .classed('dag-version', true)
                     .attr('r', 10)
-                    .attr('fill', ({id}) => {
-                        let z = x(id);
-                        if (z.frozen && z.acked)
-                            return "#f7e136"
-                        if (z.frozen)
-                            return "#8de4f7";
-                        if (z.acked)
-                            return "#42c260";
-                        return "#dadae0";
-                    })
-                    .attr("stroke-width", 3)
-                    .attr("stroke", "#4e6069")
-                    .attr('cx', ({id, x, y}) => x)
-                    .attr('cy', ({x, y}) => y);
+                    .attr('cx', ({x, y}) => x)
+                    .attr('cy', ({x, y}) => y)
+                    .classed("frozen", ({id}) => x(id).frozen)
+                    .classed("acked", ({id}) => x(id).acked);
+
+                    const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
+                    svg.append('g')
+                      .selectAll('path')
+                        .data(dag.links())
+                        .enter()
+                      .append('path')
+                        .classed('dag-arrow', true)
+                        .attr('d', arrow)
+                        .attr('transform', ({data}) => {
+                            // Last two points from the data
+                            let [end, start] = data.points.reverse();
+                            let dx = start.x - end.x;
+                            let dy = start.y - end.y;
+                            let scale = 12 / Math.sqrt(dx * dx + dy * dy);
+                            // This is the angle of the last line segment
+                            let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
+                            return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
+                        });
 
             }
 
@@ -227,14 +235,15 @@
             // Somewhat boring d3 boilerplate
             const svg = d3.select("svg.network")
                           .attr("width", size)
-                          .attr("height", size);
+                          .attr("height", size)
+                          .attr("viewBox", `0 0 ${size} ${size}`);
             
             var link = svg.append("g")
                           .classed("links", true)
                         .selectAll("line"),
 
                 node = svg.append("g")
-                          .attr("stroke-width", 3)
+                          .classed("nodes", true)
                         .selectAll("circle");
 
             update_links(trial.peers);
@@ -293,6 +302,10 @@
         }
         </script>
         <style>
+            :root {
+                --off-white: #ddd;
+                --off-black: #222;
+            }
             body {
                 padding: 0;
                 margin: 0;
@@ -305,21 +318,51 @@
                 display: flex;
                 justify-content: center;
                 align-items: center;
-                background: #222;
-            }
-            .links > g > line:first-child {
-                stroke: rgba(30, 30, 30, 0.5);
-                stroke-width: 6;
-            }
-
-            .links > g > line:last-child {
-                stroke: #ccc;
-                stroke-width: 4;
+                background: var(--off-black);
             }
             svg.dag {
                 transition: 0.3s width;
             }
-            
+            svg.network circle {
+                cursor: pointer;
+            }
+            /* Actual SVG styling now */
+            /* Network line shadows */
+            svg.network .links > g > line:first-child {
+                stroke: rgba(30, 30, 30, 0.5);
+                stroke-width: 6;
+            }
+            svg.network .links > g > line:last-child {
+                stroke: var(--off-white);
+                stroke-width: 4;
+            }
+            svg.network .nodes circle {
+                stroke-width: 3;
+            }
+
+            /* TimeDAG styling */
+            svg.dag .dag-line {
+                fill: none;
+                stroke-width: 3;
+                stroke: var(--off-white)
+            }
+            svg.dag .dag-arrow {
+                fill: var(--off-white)
+            }
+            svg.dag .dag-version {
+                stroke-width: 3;
+                stroke: #4e6069;
+                fill: #dadae0;
+            }
+            svg.dag .dag-version.frozen {
+                fill: #8de4f7;
+            }
+            svg.dag .dag-version.acked {
+                fill: #42c260;
+            }
+            svg.dag .dag-version.acked.frozen {
+                fill: #f7e136;
+            }
         </style>
     </head>
     <body>
