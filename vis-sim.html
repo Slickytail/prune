@@ -14,9 +14,10 @@
         function begin() {
             var nodes = [];
             var links = [];
-            const size = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
-                Math.min(document.documentElement.clientWidth/2, document.documentElement.clientHeight) :
-                Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight/2);
+            const elw = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
+                document.documentElement.clientWidth/2 : document.documentElement.clientWidth;
+            const elh = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
+                document.documentElement.clientHeight : document.documentElement.clientHeight/2;
             EDIT_PROB = document.getElementById('edit_prob').value;
             CONNECT_PROB = document.getElementById('connect_prob').value;
             var trial = new Trial({
@@ -130,15 +131,15 @@
                     });
                 let dag = d3.dagStratify()(timedag);
                 let layout = d3.sugiyama()
-                    .size([size-50, size-50])
+                    .size([elw-50, elh-50])
                     .layering(d3.layeringLongestPath())
                     .decross(d3.decrossTwoLayer())
                     .coord(d3.coordCenter());
                 layout(dag);
                 let svg = d3.select("svg.dag")
-                    .attr("width", size)
-                    .attr("height", size)
-                    .attr("viewBox", `-25 -25 ${size} ${size}`);
+                    .attr("width", elw)
+                    .attr("height", elh)
+                    .attr("viewBox", `-25 -25 ${elw} ${elh}`);
                 svg.selectAll("g").remove();
                 
                 // How to draw edges
@@ -187,7 +188,6 @@
                             let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
                             return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
                         });
-
             }
 
             var t_old = performance.now();
@@ -233,13 +233,13 @@
                 .force("repel", d3.forceManyBody()
                                    .strength(-1500)
                                    .distanceMax(400))
-                .force("center", d3.forceCenter(size/2, size/2));
+                .force("center", d3.forceCenter(elw/2, elh/2));
             
             // Somewhat boring d3 boilerplate
             const svg = d3.select("svg.network")
-                          .attr("width", size)
-                          .attr("height", size)
-                          .attr("viewBox", `0 0 ${size} ${size}`);
+                          .attr("width", elw)
+                          .attr("height", elh)
+                          .attr("viewBox", `0 0 ${elw} ${elh}`);
             
             var link = svg.append("g")
                           .classed("links", true)
@@ -269,6 +269,7 @@
                 if (!d3.event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
                 d.fy = d.y;
+                hoverOn(d);
             }
 
             function dragged(d) {
@@ -325,6 +326,11 @@
                 align-items: center;
                 background: var(--off-black);
             }
+            @media only screen and (max-aspect-ratio: 1/1) {
+                body {
+                    flex-direction: column;
+                }
+            }
             svg.network circle {
                 cursor: pointer;
             }
@@ -332,6 +338,7 @@
                 position: absolute;
                 bottom: 10px;
                 right: 10px;
+                z-index: 10;
             }
             .controls div {
                 display: flex;
