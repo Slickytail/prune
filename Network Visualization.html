@@ -17,6 +17,8 @@
             const size = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
                 Math.min(document.documentElement.clientWidth/2, document.documentElement.clientHeight) :
                 Math.min(document.documentElement.clientWidth, document.documentElement.clientHeight/2);
+            EDIT_PROB = document.getElementById('edit_prob').value;
+            CONNECT_PROB = document.getElementById('connect_prob').value;
             var trial = new Trial({
                 timing: 50,
                 peers: 5});
