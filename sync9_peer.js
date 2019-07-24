@@ -266,7 +266,8 @@ function sync9_create_peer(p_funcs) {
         return function(a) {
             return {
                 frozen: frozen[a] || false,
-                acked: tags[a].tags['_full_ack'] || false
+                acked: tags[a].tags['_full_ack'] || false,
+                fissures: Object.keys(tags[a].tags).filter(x => x != '_full_ack')
             }
         }
     }    

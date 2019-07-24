@@ -154,7 +154,7 @@
                     .classed('dag-line', true)
                     .attr('d', ({ data }) => line(data.points));
                 
-                let nodes = svg.append('g')
+                svg.append('g')
                   .selectAll('g')
                     .data(dag.descendants())
                     .enter()
@@ -164,7 +164,8 @@
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
                     .classed("frozen", ({id}) => x(id).frozen)
-                    .classed("acked", ({id}) => x(id).acked);
+                    .classed("acked", ({id}) => x(id).acked)
+                    .classed("fissured", ({id}) => x(id).fissures.length > 0);
 
                     const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
                     svg.append('g')
@@ -281,7 +282,9 @@
             
             var dag = null;
             trial.on("tick", (p) => {
-                if (dag && dag.id == p.uid)
+                if (!dag)
+                    dag = {id: p.uid}
+                if (dag.id == p.uid)
                     requestAnimationFrame(() => draw_dag(dag));
             });
             function hoverOn(d) {
@@ -320,13 +323,33 @@
                 align-items: center;
                 background: var(--off-black);
             }
-            svg.dag {
-                transition: 0.3s width;
-            }
             svg.network circle {
                 cursor: pointer;
             }
-            /* Actual SVG styling now */
+            .controls {
+                position: absolute;
+                bottom: 10px;
+                right: 10px;
+            }
+            .controls div {
+                display: flex;
+                justify-content: space-between;
+                opacity: 0.5;
+                transition: 0.15s opacity ease;
+            }
+            .controls div:hover {
+                opacity: 1;
+            }
+            .controls label {
+                color: var(--off-white);
+                font-family: Roboto, sans-serif;
+                margin-right: 1ch;
+            }
+            .controls input {
+                cursor: pointer;
+            }
+
+            /* Network SVG Styling*/
             /* Network line shadows */
             svg.network .links > g > line:first-child {
                 stroke: rgba(30, 30, 30, 0.5);
@@ -363,10 +386,23 @@
             svg.dag .dag-version.acked.frozen {
                 fill: #f7e136;
             }
+            svg.dag .dag-version.fissured {
+                stroke: #942c2c;
+            }
         </style>
     </head>
     <body>
-        <svg class="dag" width="0"></svg>
+        <svg class="dag"></svg>
         <svg class="network"></svg>
+        <div class="controls">
+            <div>
+                <label for="edit_prob">Edit rate</label>
+                <input type="range" min="0" max="1" value="0.1" step="0.01" id="edit_prob" oninput="EDIT_PROB = this.value;">
+            </div>
+            <div>
+                <label for="connect_prob">Disconnect and reconnect rate</label>
+                <input type="range" min="0" max="1" value="0.1" step="0.01" id="connect_prob" oninput="CONNECT_PROB = this.value;">
+            </div>
+        </div>
     </body>
 </html>

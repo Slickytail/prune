@@ -1,3 +1,6 @@
+var EDIT_PROB = 0.1;
+var CONNECT_PROB = 0.1;
+
 class Trial {
 
     constructor(options) {
@@ -94,8 +97,8 @@ class Trial {
         var i = Math.floor(this.rand() * this.n_peers)
         var p = this.peers_array[i]
         
-        if (this.rand() < 0.03) {
-            if (this.rand() < 1.9) {
+        if (this.rand() < EDIT_PROB) {
+            if (this.rand() > CONNECT_PROB) {
                 if (p.letters_i >= p.letters.length) {
                     p.letters_i = 0
                 }
