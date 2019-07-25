@@ -1,11 +1,11 @@
 var EDIT_PROB = 0.1;
 var CONNECT_PROB = 0.1;
+var TIMING = 50;
 
 class Trial {
 
     constructor(options) {
         this.debug = options.debug || false;
-        this.timing = options.timing || 50;
         this.n_peers = options.peers || 4;
         this.seed = options.seed || "seed";
 
@@ -138,7 +138,7 @@ class Trial {
 
         this.emit("tick", p)
         
-        setTimeout(() => this._tick(), this.timing);
+        setTimeout(() => this._tick(), TIMING);
     }
     
     begin() {

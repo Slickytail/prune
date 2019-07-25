@@ -19,11 +19,13 @@
             const elw = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
                 document.documentElement.clientWidth/2 : document.documentElement.clientWidth;
             const elh = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
-                document.documentElement.clientHeight - 50 : document.documentElement.clientHeight/2 - 25;
+                document.documentElement.clientHeight - 70 : document.documentElement.clientHeight/2 - 35;
+
             EDIT_PROB = document.getElementById('edit_prob').value;
             CONNECT_PROB = document.getElementById('connect_prob').value;
+            TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
+
             var trial = new Trial({
-                timing: 100,
                 peers: 4});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
@@ -392,11 +394,12 @@
             :root {
                 --off-white: #ddd;
                 --off-black: #222;
+                --n-controls: 3;
             }
             body {
                 padding: 0;
                 margin: 0;
-                padding-bottom: 50px;
+                padding-bottom: calc(var(--n-controls) * 22px);
                 position: absolute;
                 top: 0;
                 bottom: 0;
@@ -416,14 +419,14 @@
                 bottom: 10px;
                 right: 10px;
                 z-index: 10;
-                height: 50px;
+                height: calc(var(--n-controls) * 22px);
             }
             .controls div {
                 display: flex;
                 justify-content: space-between;
                 opacity: 0.5;
                 transition: 0.15s opacity ease;
-                height: 50%;
+                height: calc(100% / var(--n-controls));
             }
             .controls div:hover {
                 opacity: 1;
@@ -517,12 +520,19 @@
         <svg class="network"></svg>
         <div class="controls">
             <div>
+                <label for="timing">Simulation Speed</label>
+                <input type="range" min="0.1" max="3" value="1" step="0.01" id="timing"
+                    oninput="TIMING = 1000*Math.pow(10, -this.value);">
+            </div>
+            <div>
                 <label for="edit_prob">Edit rate</label>
-                <input type="range" min="0" max="1" value="0.1" step="0.01" id="edit_prob" oninput="EDIT_PROB = this.value;">
+                <input type="range" min="0" max="1" value="0.1" step="0.01" id="edit_prob"
+                    oninput="EDIT_PROB = this.value;">
             </div>
             <div>
                 <label for="connect_prob">Disconnect and reconnect rate</label>
-                <input type="range" min="0" max="1" value="0.1" step="0.01" id="connect_prob" oninput="CONNECT_PROB = this.value;">
+                <input type="range" min="0" max="1" value="0.1" step="0.01" id="connect_prob"
+                    oninput="CONNECT_PROB = this.value;">
             </div>
         </div>
     </body>
