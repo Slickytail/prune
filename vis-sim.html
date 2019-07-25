@@ -12,6 +12,7 @@
         <script src="./sync9_peer.js"></script>
         <script src="./trial.js"></script>
         <script>
+        var P;
         function begin() {
             var nodes = [];
             var links = [];
@@ -22,8 +23,8 @@
             EDIT_PROB = document.getElementById('edit_prob').value;
             CONNECT_PROB = document.getElementById('connect_prob').value;
             var trial = new Trial({
-                timing: 50,
-                peers: 5});
+                timing: 100,
+                peers: 4});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
             trial.begin();
@@ -97,15 +98,17 @@
                 // Remove deleted nodes
                 node.exit().remove();
                 // Add new nodes and draw circles on them
-                node = node.enter()
-                               .append("circle")
-                                   .attr("r", 10)
-                                   .call(d3.drag()
-                                       .on("start", dragstarted)
-                                       .on("drag", dragged)
-                                       .on("end", dragended))
-                                    .on('mouseover', hoverOn)
-                               .merge(node);
+                let enter = node.enter()
+                  .append("g");
+                enter.append("circle")
+                    .attr("r", 10)
+                    .classed("node", true)
+                node = node.merge(enter)
+                    .call(d3.drag()
+                        .on("start", dragstarted)
+                        .on("drag", dragged)
+                        .on("end", dragended))
+                    .on('mouseover', hoverOn);
 
                 // Bind links, remove deleted, and add new.
                 link = link.data(links, d => d.source.id + "-" + d.target.id);
@@ -120,7 +123,78 @@
                                })
                                 .merge(link);
             }
+            /* Update fissure notifications for peers */
+            var colors= {}
+            function update_fissures() {
+                let fissures = new Set();
+                let fis = (f) => {
+                    let m = f.a < f.b ? f.a : f.b,
+                        p = f.a < f.b ? f.b : f.a;
+                    return {
+                        min: m,
+                        plus: p,
+                        sign: f.a < f.b ? "+" : "-",
+                        tag: `${m}:${p}`
+                    };
+                }
+                for (let p of Object.values(trial.peers)) {
+                    Object.values(p.fissures)
+                        .forEach(f => fissures.add(fis(f).tag));
+                }
+                // Delete unused colors
+                for (let f of Object.keys(colors)) {
+                    if (!fissures.has(f))
+                        delete colors[f];
+                }
+                for (let f of fissures) {
+                    if (!colors[f]) {
+                        // Let's find a new color
+                        // What we want to do is find the color that is furthest away from every other color
+                        let positions = Object.values(colors).map(c => c.angle).sort().concat([1]);
+                        let best = 0,
+                            biggest = positions[0];
+                        for (let i = 0; i < positions.length - 1; i++) {
+                            let smaller = positions[i];
+                            let bigger = positions[i+1];
+                            if (bigger - smaller > biggest) {
+                                best = (bigger + smaller) / 2;
+                                biggest = bigger - smaller;
+                            }
+                        }
 
+                        colors[f] = {angle: best, color: d3.interpolateRainbow(best)};
+                    }
+                }
+                
+                let fdots = node
+                  .selectAll("g.fissure")
+                    .data(d => Object.values(trial.peers[d.id].fissures).map((f, i) => Object.assign({x: i}, fis(f))),
+                          f => f.tag+f.sign);
+                
+                fdots.exit().remove();
+
+                let e = fdots
+                   .enter()
+                   .append("g")
+                   .classed("fissure", true);
+                
+                e.append("circle")
+                    .classed("fissure-circ", true)
+                    .attr("r", 7)
+                    .attr("cx", f => f.x * 18 + 20)
+                    .attr("cy", -10)
+                    .attr("fill", f => colors[f.tag].color);
+                e.append('text')
+                    .classed("fissure-sign", true)
+                    .html(f => f.sign == "-" ? "&minus;" : "+")
+                    .attr("x", f => f.x * 18 + 20)
+                    .attr("y", -5)
+                    .attr('alignment-baseline', 'middle');
+                
+                fdots = fdots.merge(e);
+            }
+
+            /* Draw the dag for a peer d */
             function draw_dag(d) {
                 // Get the timedag of the peer
                 let pe = trial.peers[d.id];
@@ -171,8 +245,7 @@
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
                     .classed("frozen", ({id}) => x(id).frozen)
-                    .classed("acked", ({id}) => x(id).acked)
-                    .classed("fissured", ({id}) => x(id).fissures.length > 0);
+                    .classed("acked", ({id}) => x(id).acked);
 
                     const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
                     svg.append('g')
@@ -223,7 +296,8 @@
                         `rgb(${c.r * 0.6},${c.g * 0.5},${c.b * 0.4})`;
 
                 }
-                node.attr("fill", d => f(d.et))
+                node.selectAll("circle.node")
+                    .attr("fill", d => f(d.et))
                     .attr("stroke", d => s(d));
                 
                 requestAnimationFrame(tick)
@@ -253,7 +327,7 @@
 
                 node = svg.append("g")
                           .classed("nodes", true)
-                        .selectAll("circle");
+                        .selectAll("g");
 
             update_links(trial.peers);
 
@@ -267,8 +341,7 @@
                     .attr("x2", d => d.target.x)
                     .attr("y2", d => d.target.y);
                 node
-                    .attr("cx", d => d.x)
-                    .attr("cy", d => d.y);
+                    .attr("transform", d => `translate(${d.x}, ${d.y})`);
             });
              
             function dragstarted(d) {
@@ -295,12 +368,14 @@
                     dag = {id: p.uid}
                 if (dag.id == p.uid)
                     requestAnimationFrame(() => draw_dag(dag));
+                requestAnimationFrame(() => update_fissures());
             });
             function hoverOn(d) {
                 if (dag)
                     dag.selected = false;
                 d.selected = true;
                 dag = d;
+                P = trial.peers[dag.id];
                 requestAnimationFrame(() => draw_dag(dag));
             }
             
@@ -375,6 +450,21 @@
             svg.network .nodes circle {
                 stroke-width: 3;
             }
+            svg.network .fissure,
+            svg.network .fissure * {
+                cursor: default;
+            }
+            svg.network .fissure text.fissure-sign {
+                font-weight: bold;
+                font-family: sans-serif;
+                text-anchor: middle;
+                fill: white;
+                font-size: 14px;
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
 
             /* TimeDAG styling */
             svg.dag .dag-line {
@@ -398,9 +488,6 @@
             }
             svg.dag .dag-version.acked.frozen {
                 fill: #f7e136;
-            }
-            svg.dag .dag-version.fissured {
-                stroke: #942c2c;
             }
             @media screen and (max-aspect-ratio: 1/1) {
                 body {
