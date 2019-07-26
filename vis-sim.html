@@ -101,10 +101,11 @@
                 node.exit().remove();
                 // Add new nodes and draw circles on them
                 let enter = node.enter()
-                  .append("g");
+                  .append("g")
+                  .attr("data-pid", d => d.id);
                 enter.append("circle")
                     .attr("r", 10)
-                    .classed("node", true)
+                    .classed("node", true);
                 node = node.merge(enter)
                     .call(d3.drag()
                         .on("start", dragstarted)
@@ -126,7 +127,7 @@
                                 .merge(link);
             }
             /* Update fissure notifications for peers */
-            var colors= {}
+            var colors = {};
             function update_fissures() {
                 let fissures = new Set();
                 let fis = (f) => {
@@ -243,26 +244,27 @@
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
                     .classed("frozen", ({id}) => x(id).frozen)
-                    .classed("acked", ({id}) => x(id).acked);
+                    .classed("acked", ({id}) => x(id).acked)
+                    .attr("data-vid", ({id}) => id)
 
-                    const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
-                    svg.append('g')
-                      .selectAll('path')
-                        .data(dag.links())
-                        .enter()
-                      .append('path')
-                        .classed('dag-arrow', true)
-                        .attr('d', arrow)
-                        .attr('transform', ({data}) => {
-                            // Last two points from the data
-                            let [end, start] = data.points.reverse();
-                            let dx = start.x - end.x;
-                            let dy = start.y - end.y;
-                            let scale = 12 / Math.sqrt(dx * dx + dy * dy);
-                            // This is the angle of the last line segment
-                            let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
-                            return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
-                        });
+                const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
+                svg.append('g')
+                    .selectAll('path')
+                    .data(dag.links())
+                    .enter()
+                    .append('path')
+                    .classed('dag-arrow', true)
+                    .attr('d', arrow)
+                    .attr('transform', ({data}) => {
+                        // Last two points from the data
+                        let [end, start] = data.points.reverse();
+                        let dx = start.x - end.x;
+                        let dy = start.y - end.y;
+                        let scale = 12 / Math.sqrt(dx * dx + dy * dy);
+                        // This is the angle of the last line segment
+                        let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
+                        return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
+                    });
             }
 
             var t_old = performance.now();
