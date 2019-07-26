@@ -170,30 +170,27 @@
                 
                 let fdots = node
                   .selectAll("g.fissure")
-                    .data(d => Object.values(trial.peers[d.id].fissures).map((f, i) => Object.assign({x: i}, fis(f))),
+                    .data(d => Object.values(trial.peers[d.id].fissures).map(fis),
                           f => f.tag+f.sign);
                 
                 fdots.exit().remove();
 
                 let e = fdots
-                   .enter()
-                   .append("g")
-                   .classed("fissure", true);
+                  .enter()
+                  .append("g")
+                   .classed("fissure", true)
                 
                 e.append("circle")
                     .classed("fissure-circ", true)
                     .attr("r", 7)
-                    .attr("cx", f => f.x * 18 + 20)
-                    .attr("cy", -10)
                     .attr("fill", f => colors[f.tag].color);
                 e.append('text')
                     .classed("fissure-sign", true)
                     .html(f => f.sign == "-" ? "&minus;" : "+")
-                    .attr("x", f => f.x * 18 + 20)
-                    .attr("y", -5)
+                    .attr("y", 5)
                     .attr('alignment-baseline', 'middle');
-                
-                fdots = fdots.merge(e);
+                fdots = fdots.merge(e)
+                    .attr("transform", (f, i) => `translate(${i * 18 + 20}, -10)`);;
             }
 
             /* Draw the dag for a peer d */
