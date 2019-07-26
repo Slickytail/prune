@@ -187,10 +187,9 @@
                 e.append('text')
                     .classed("fissure-sign", true)
                     .html(f => f.sign == "-" ? "&minus;" : "+")
-                    .attr("y", 5)
-                    .attr('alignment-baseline', 'middle');
+                    .attr("y", 5);
                 fdots = fdots.merge(e)
-                    .attr("transform", (f, i) => `translate(${i * 18 + 20}, -10)`);;
+                    .attr("transform", (f, i) => `translate(${i * 18 + 20}, -10)`);
             }
 
             /* Draw the dag for a peer d */
@@ -332,6 +331,10 @@
 
             simulation.on("tick", () => {
                 // Move the nodes and lines
+                nodes.forEach(d => {
+                    d.x = Math.min(Math.max(10, d.x), elw-10);
+                    d.y = Math.min(Math.max(10, d.y), elh-10);
+                })
                 link
                   .selectAll("line")
                   .data(d => [d, d])
