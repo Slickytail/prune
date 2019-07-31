@@ -268,11 +268,38 @@ function sync9_create_peer(p_funcs) {
         return function(a) {
             return {
                 frozen: frozen[a] || false,
-                acked: tags[a].tags['_full_ack'] || false,
-                fissures: Object.keys(tags[a].tags).filter(x => x != '_full_ack')
+                acked: tags[a].tags['_full_ack'] || false
             }
         }
-    }    
+    }
+    self.f_state = () => {
+        var states = {};
+        function fis(f) {
+            let m = f.a < f.b ? f.a : f.b,
+                p = f.a < f.b ? f.b : f.a;
+            return `${m}:${p}`;
+        };
+        function mark_version(v, tag) {
+            if (!states[v])
+                states[v] = {};
+            states[v][tag] = true;
+        }
+        function mark_to(v, tag) {
+            if (!states[v])
+                states[v] = {};
+            if (!states[v][tag]) {
+                states[v][tag] = true;
+                Object.keys(self.s9.T[v]).forEach(p => mark_to(p, tag));
+            }
+        }
+        function mark(fissure) {
+            let fid = fis(fissure);
+            Object.keys(fissure.top).forEach(v => mark_version(v, fid));
+            Object.keys(fissure.bottom).forEach(v => mark_to(v, fid));
+        };
+        Object.values(self.fissures).forEach(mark);
+        return v => states[v] || {};
+    }
     
     return self
 }

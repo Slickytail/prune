@@ -12,7 +12,8 @@
         <script src="./sync9_peer.js"></script>
         <script src="./trial.js"></script>
         <script>
-        var P;
+        var P = null;
+        var p_data = null;
         function begin() {
             var nodes = [];
             var links = [];
@@ -26,7 +27,7 @@
             TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
 
             var trial = new Trial({
-                peers: 4});
+                peers: 6});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
             trial.begin();
@@ -47,6 +48,11 @@
                             node.y = peer.y;
                             break;
                         }
+                    }
+                    if (!p_data) {
+                        P = peers[uid];
+                        node.selected = true;
+                        p_data = node;
                     }
                     return node;
                 })
@@ -128,18 +134,18 @@
             }
             /* Update fissure notifications for peers */
             var colors = {};
+            function fis(f) {
+                let m = f.a < f.b ? f.a : f.b,
+                    p = f.a < f.b ? f.b : f.a;
+                return {
+                    min: m,
+                    plus: p,
+                    sign: f.a < f.b ? "+" : "-",
+                    tag: `${m}:${p}`
+                };
+            };
             function update_fissures() {
                 let fissures = new Set();
-                let fis = (f) => {
-                    let m = f.a < f.b ? f.a : f.b,
-                        p = f.a < f.b ? f.b : f.a;
-                    return {
-                        min: m,
-                        plus: p,
-                        sign: f.a < f.b ? "+" : "-",
-                        tag: `${m}:${p}`
-                    };
-                }
                 for (let p of Object.values(trial.peers)) {
                     Object.values(p.fissures)
                         .forEach(f => fissures.add(fis(f).tag));
@@ -193,11 +199,13 @@
                     .attr("transform", (f, i) => `translate(${i * 18 + 20}, -10)`);
             }
 
+            var s_fissure = null;
             /* Draw the dag for a peer d */
             function draw_dag(d) {
                 // Get the timedag of the peer
                 let pe = trial.peers[d.id];
                 let x = pe.v_state();
+                let z = pe.f_state();
                 let timedag_data = pe.s9.T;
                 let timedag = Object.entries(timedag_data)
                     .map(([k, v]) => {
@@ -224,6 +232,14 @@
                     //.curve(d3.curveCatmullRom)
                     .x(d => d.x)
                     .y(d => d.y);
+
+                let fissures = Object.values(pe.fissures).map(fis);
+                function color_nodes() {
+                    svg
+                      .selectAll('circle.dag-version')
+                        .attr('stroke', ({id}) => z(id)[s_fissure] ? colors[s_fissure].color : "#4e6069")
+                        .attr('stroke-width', ({id}) => z(id)[s_fissure] ? 5 : 3);
+                }
                 
                 // Plot edges
                 svg.append('g')
@@ -243,9 +259,14 @@
                     .attr('r', 10)
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
+                    .attr('stroke', "#4e6069")
+                    .attr('stroke-width', 3)
                     .classed("frozen", ({id}) => x(id).frozen)
                     .classed("acked", ({id}) => x(id).acked)
-                    .attr("data-vid", ({id}) => id)
+                    .classed("fissured", ({id}) => Object.keys(z(id)).length)
+                    .attr("data-vid", ({id}) => id);
+                
+                color_nodes();
 
                 const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
                 svg.append('g')
@@ -264,6 +285,31 @@
                         // This is the angle of the last line segment
                         let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
                         return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
+                    });
+                
+                svg.append('g')
+                  .selectAll('rect')
+                    .data(fissures)
+                    .enter()
+                  .append('rect')
+                    .classed('dag-select', true)
+                    .attr('width', d => s_fissure == d.tag ? 50 : 30)
+                    .attr('height', elh/fissures.length)
+                    .attr('x', -(dag_wo + 50))
+                    .attr("y", (f, i) => elh/fissures.length * i)
+                    .attr('fill', f => colors[f.tag].color)
+                    .on('mouseover', d => {
+                        s_fissure = d.tag;
+                        d3.select(d3.event.target)
+                            .attr('width', 50);
+                        setTimeout(() => color_nodes());
+                    })
+                    .on('mouseout', d => {
+                        if (s_fissure === d.tag)
+                            s_fissure = null;
+                        d3.select(d3.event.target)
+                            .attr('width', 30);
+                        setTimeout(() => color_nodes());
                     });
             }
 
@@ -366,21 +412,17 @@
                 d.fy = null;
             }
             
-            var dag = null;
             trial.on("tick", (p) => {
-                if (!dag)
-                    dag = {id: p.uid}
-                if (dag.id == p.uid)
-                    requestAnimationFrame(() => draw_dag(dag));
-                requestAnimationFrame(() => update_fissures());
+                if (p_data.id == p.uid)
+                    requestAnimationFrame(() => {update_fissures(); draw_dag(p_data)});
             });
             function hoverOn(d) {
-                if (dag)
-                    dag.selected = false;
+                if (p_data)
+                    p_data.selected = false;
                 d.selected = true;
-                dag = d;
-                P = trial.peers[dag.id];
-                requestAnimationFrame(() => draw_dag(dag));
+                p_data = d;
+                P = trial.peers[p_data.id];
+                requestAnimationFrame(() => {update_fissures(); draw_dag(p_data)});
             }
             
         }
@@ -475,24 +517,27 @@
             svg.dag .dag-line {
                 fill: none;
                 stroke-width: 3;
-                stroke: var(--off-white)
+                stroke: var(--off-white);
             }
             svg.dag .dag-arrow {
-                fill: var(--off-white)
+                fill: var(--off-white);
             }
             svg.dag .dag-version {
-                stroke-width: 3;
-                stroke: #4e6069;
                 fill: #dadae0;
-            }
-            svg.dag .dag-version.frozen {
-                fill: #8de4f7;
             }
             svg.dag .dag-version.acked {
                 fill: #42c260;
             }
             svg.dag .dag-version.acked.frozen {
                 fill: #f7e136;
+            }
+            svg.dag .fissure-line {
+                stroke-width: 2;
+                stroke-opacity: 0.7;
+                fill: none;
+            }
+            svg.dag .fissure-fill {
+                fill-opacity: 0.3;
             }
             @media screen and (max-aspect-ratio: 1/1) {
                 body {
