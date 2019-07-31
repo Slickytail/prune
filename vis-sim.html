@@ -93,10 +93,16 @@
             }
             /* When we get an edit, mark "edit time" on the peer that made it */
             function rec_edit(uid, edit) {
-                for (var node of nodes) {
-                    if (node.id === uid) {
-                        node.et = 0;
-                    }
+                let c = d3
+                  .selectAll("svg.network .nodes > g")
+                    .filter(d => d.id == uid)
+                  .select("circle");
+                if (c.classed("edit-blip-1")) {
+                    c.classed("edit-blip-1", false);
+                    c.classed("edit-blip-2", true);
+                } else {
+                    c.classed("edit-blip-2", false);
+                    c.classed("edit-blip-1", true);
                 }
             }
             /* Update the SVG elements with new or removed nodes and links */
@@ -111,13 +117,14 @@
                   .attr("data-pid", d => d.id);
                 enter.append("circle")
                     .attr("r", 10)
-                    .classed("node", true);
-                node = node.merge(enter)
-                    .call(d3.drag()
+                    .classed("node", true)
+                enter.call(d3.drag()
                         .on("start", dragstarted)
                         .on("drag", dragged)
                         .on("end", dragended))
                     .on('mouseover', hoverOn);
+                node = node.merge(enter)
+                    .classed("selected", d => d.selected);
 
                 // Bind links, remove deleted, and add new.
                 link = link.data(links, d => d.source.id + "-" + d.target.id);
@@ -200,17 +207,28 @@
             }
 
             var s_fissure = null;
+            var draw_n = 0;
             /* Draw the dag for a peer d */
-            function draw_dag(d) {
+            function draw_dag(d, clear) {
                 // Get the timedag of the peer
                 let pe = trial.peers[d.id];
-                let x = pe.v_state();
-                let z = pe.f_state();
-                let timedag_data = pe.s9.T;
-                let timedag = Object.entries(timedag_data)
+                let timedag = Object.entries(pe.s9.T)
                     .map(([k, v]) => {
                         return {id: k, parentIds: Object.keys(v)};
                     });
+                
+                if (timedag.length > 500) {
+                    d3.select("svg.dag").classed("disabled", true);
+                    return false;
+                }
+                if (++draw_n * 50 < timedag.length) {
+                    return false;
+                }
+                draw_n = 0;
+
+                let x = pe.v_state();
+                let z = pe.f_state();
+
                 let dag = d3.dagStratify()(timedag);
                 let layout = d3.sugiyama()
                     .size([elw, elh])
@@ -222,10 +240,12 @@
                 const dag_ho = Math.max(0, 375 - elh);
                 const dag_wo = Math.max(0, 375 - elw);
                 let svg = d3.select("svg.dag")
+                    .classed("disabled", false)
                     .attr("width", elw)
                     .attr("height", elh)
                     .attr("viewBox", `-${dag_wo + 25} -${dag_ho + 25} ${elw+2*(25 + dag_wo)} ${elh+2*(25 + dag_ho)}`);
-                svg.selectAll("g").remove();
+                if (clear)
+                    svg.selectAll("g").selectAll("*").remove();
                 
                 // How to draw edges
                 let line = d3.line()
@@ -237,45 +257,52 @@
                 function color_nodes() {
                     svg
                       .selectAll('circle.dag-version')
-                        .attr('stroke', ({id}) => z(id)[s_fissure] ? colors[s_fissure].color : "#4e6069")
-                        .attr('stroke-width', ({id}) => z(id)[s_fissure] ? 5 : 3);
+                        .attr('stroke', ({id}) => z(id)[s_fissure] ? colors[s_fissure].color : "#4e6069");
                 }
                 
                 // Plot edges
-                svg.append('g')
+                let edges = svg.select("g.edges")
                   .selectAll('path')
-                    .data(dag.links())
-                    .enter()
+                    .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
+
+                edges.enter()
                   .append('path')
                     .classed('dag-line', true)
+                  .merge(edges)
                     .attr('d', ({ data }) => line(data.points));
+
+                edges.exit().remove();
                 
-                svg.append('g')
-                  .selectAll('g')
-                    .data(dag.descendants())
-                    .enter()
+                let nodes = svg.select("g.nodes")
+                  .selectAll('circle')
+                    .data(dag.descendants(), n => n.id);
+                
+                nodes.enter()
                   .append('circle')
                     .classed('dag-version', true)
                     .attr('r', 10)
+                    .attr('stroke', "#4e6069")
+                    .attr("data-vid", ({id}) => id)
+                  .merge(nodes)
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
-                    .attr('stroke', "#4e6069")
-                    .attr('stroke-width', 3)
                     .classed("frozen", ({id}) => x(id).frozen)
                     .classed("acked", ({id}) => x(id).acked)
-                    .classed("fissured", ({id}) => Object.keys(z(id)).length)
-                    .attr("data-vid", ({id}) => id);
-                
+                    .classed("fissured", ({id}) => Object.keys(z(id)).length);
+
+                nodes.exit().remove();
                 color_nodes();
 
-                const arrow = d3.symbol().type(d3.symbolTriangle).size(60);
-                svg.append('g')
-                    .selectAll('path')
-                    .data(dag.links())
-                    .enter()
-                    .append('path')
+                const arrowhead = d3.symbol().type(d3.symbolTriangle).size(60);
+                let arrows = svg.select('g.arrows')
+                  .selectAll('path')
+                    .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
+                
+                arrows.enter()
+                  .append('path')
                     .classed('dag-arrow', true)
-                    .attr('d', arrow)
+                    .attr('d', arrowhead)
+                  .merge(arrows)
                     .attr('transform', ({data}) => {
                         // Last two points from the data
                         let [end, start] = data.points.reverse();
@@ -287,16 +314,16 @@
                         return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
                     });
                 
-                svg.append('g')
+                arrows.exit().remove();
+                
+                let fissure_bars = svg.select('g.fissures')
                   .selectAll('rect')
-                    .data(fissures)
-                    .enter()
+                    .data(fissures, f => f.tag);
+                
+                fissure_bars.enter()
                   .append('rect')
                     .classed('dag-select', true)
-                    .attr('width', d => s_fissure == d.tag ? 50 : 30)
-                    .attr('height', elh/fissures.length)
                     .attr('x', -(dag_wo + 50))
-                    .attr("y", (f, i) => elh/fissures.length * i)
                     .attr('fill', f => colors[f.tag].color)
                     .on('mouseover', d => {
                         s_fissure = d.tag;
@@ -310,45 +337,15 @@
                         d3.select(d3.event.target)
                             .attr('width', 30);
                         setTimeout(() => color_nodes());
-                    });
+                    })
+                  .merge(fissure_bars)
+                    .attr('width', d => s_fissure == d.tag ? 50 : 30)
+                    .attr('height', elh/fissures.length)
+                    .attr("y", (f, i) => elh/fissures.length * i);
+
+                fissure_bars.exit().remove(); 
+                    
             }
-
-            var t_old = performance.now();
-            function tick(time) {
-                var elapsed = (time - t_old);
-                t_old = time;
-
-                // Draw edit blips
-                for (let n of nodes) {
-                    if (n.et == null)
-                        n.et = Infinity;
-                    else
-                        n.et += elapsed;
-                }
-                let col = function (et) {
-                    let r = 200 * (1 - Math.exp(et/-1000));
-                    let g = 120 * (1 - Math.exp(et/-500)) + 100;
-                    let b = 240;
-                    return {r: r, g: g, b: b}
-                }
-                let f = function (et) {
-                    let c = col(et);
-                    return `rgb(${c.r},${c.g},${c.b})`
-                }
-                let s = function(d) {
-                    let c = col(d.et);
-                    return d.selected ? 
-                        `rgb(181, 37, 194)` :
-                        `rgb(${c.r * 0.6},${c.g * 0.5},${c.b * 0.4})`;
-
-                }
-                node.selectAll("circle.node")
-                    .attr("fill", d => f(d.et))
-                    .attr("stroke", d => s(d));
-                
-                requestAnimationFrame(tick)
-            }
-            requestAnimationFrame(tick);
 
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
@@ -393,7 +390,7 @@
                 node
                     .attr("transform", d => `translate(${d.x}, ${d.y})`);
             });
-             
+            
             function dragstarted(d) {
                 if (!d3.event.active) simulation.alphaTarget(0.3).restart();
                 d.fx = d.x;
@@ -412,17 +409,22 @@
                 d.fy = null;
             }
             
-            trial.on("tick", (p) => {
+            trial.on("tick", p => {
                 if (p_data.id == p.uid)
                     requestAnimationFrame(() => {update_fissures(); draw_dag(p_data)});
             });
             function hoverOn(d) {
+                let clear = d != p_data;
                 if (p_data)
                     p_data.selected = false;
+                
                 d.selected = true;
+                P = trial.peers[d.id];
+                
+                d3.selectAll("svg.network .nodes > g")
+                    .classed("selected", d => d.selected);
                 p_data = d;
-                P = trial.peers[p_data.id];
-                requestAnimationFrame(() => {update_fissures(); draw_dag(p_data)});
+                requestAnimationFrame(() => {update_fissures(); draw_dag(d, clear)});
             }
             
         }
@@ -454,9 +456,6 @@
                 justify-content: center;
                 align-items: center;
                 background: var(--off-black);
-            }
-            svg.network circle {
-                cursor: pointer;
             }
             .controls {
                 position: absolute;
@@ -494,8 +493,27 @@
                 stroke: var(--off-white);
                 stroke-width: 4;
             }
-            svg.network .nodes circle {
+            svg.network .nodes > g > circle {
                 stroke-width: 3;
+                fill: #c8dcf0;
+                stroke: #786e60;
+                cursor: pointer;
+
+                animation-timing-function: cubic-bezier(.22,.61,.36,1);
+                animation-duration: 2s;
+            }
+            svg.network .nodes g.selected > circle {
+                stroke: #b525c2;
+            }
+            .edit-blip-1 {animation-name: edit-blip-1;}
+            .edit-blip-2 {animation-name: edit-blip-2;}
+            @keyframes edit-blip-1 {
+                from {fill: rgb(20, 100, 200);}
+                to {fill: #c8dcf0;}
+            }
+            @keyframes edit-blip-2 {
+                from {fill: rgb(20, 100, 200);}
+                to {fill: #c8dcf0;}
             }
             svg.network .fissure,
             svg.network .fissure * {
@@ -514,6 +532,10 @@
             }
 
             /* TimeDAG styling */
+            svg.dag.disabled {
+                filter: blur(2px) grayscale(85%);
+                pointer-events: none;
+            }
             svg.dag .dag-line {
                 fill: none;
                 stroke-width: 3;
@@ -524,6 +546,7 @@
             }
             svg.dag .dag-version {
                 fill: #dadae0;
+                stroke-width: 3;
             }
             svg.dag .dag-version.acked {
                 fill: #42c260;
@@ -539,6 +562,7 @@
             svg.dag .fissure-fill {
                 fill-opacity: 0.3;
             }
+            
             @media screen and (max-aspect-ratio: 1/1) {
                 body {
                     padding-bottom: 0;
@@ -563,7 +587,12 @@
         </style>
     </head>
     <body>
-        <svg class="dag"></svg>
+        <svg class="dag">
+            <g class="edges"></g>
+            <g class="nodes"></g>
+            <g class="arrows"></g>
+            <g class="fissures"></g>
+        </svg>
         <svg class="network"></svg>
         <div class="controls">
             <div>
