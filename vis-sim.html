@@ -15,19 +15,34 @@
         var P = null;
         const N = 6;
         function begin() {
+            // Compute the size of SVG elements
+            const body = document.getElementsByTagName('body')[0];
+            var computedStyle = getComputedStyle(body);
+
+            const bh = body.clientHeight
+                - parseFloat(computedStyle.paddingTop)
+                - parseFloat(computedStyle.paddingBottom);
+            const bw = body.clientWidth
+                - parseFloat(computedStyle.paddingLeft)
+                - parseFloat(computedStyle.paddingRight);
+            
+            const ratio = document.documentElement.clientWidth
+                          / document.documentElement.clientHeight;
+            const elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
+                  elh = Math.min((ratio > 1) ? bh : bh/2, 500);
+
+            d3.select("svg.dag").attr("viewBox", `-30 -30 ${elw+60} ${elh+60}`);
+            const svg = d3.select("svg.network")
+                          .attr("viewBox", `-10 -10 ${elw+10} ${elh+10}`);
+            const sim_scale = Math.min(1, Math.min(elw, elh)/500);
+            
             var nodes = [];
             var links = [];
             var p_data = null;
-            const elw = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
-                document.documentElement.clientWidth/2 : document.documentElement.clientWidth;
-            const elh = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
-                document.documentElement.clientHeight - 70 : document.documentElement.clientHeight/2 - 35;
 
             document.getElementById('edit_prob').oninput = () => {
                 const exp = -2 * Math.log(N)/Math.log(0.25);
-                console.log(exp);
                 EDIT_PROB = Math.pow(document.getElementById('edit_prob').value, exp);
-                console.log(EDIT_PROB)
             };
             document.getElementById('edit_prob').oninput();
 
@@ -252,19 +267,16 @@
                     .coord(d3.coordCenter());
                 layout(dag);
 
-                const dag_ho = Math.max(0, 375 - elh);
-                const dag_wo = Math.max(0, 375 - elw);
                 let svg = d3.select("svg.dag")
-                    .classed("disabled", false)
-                    .attr("width", elw)
-                    .attr("height", elh)
-                    .attr("viewBox", `-${dag_wo + 25} -${dag_ho + 25} ${elw+2*(25 + dag_wo)} ${elh+2*(25 + dag_ho)}`);
+                    .classed("disabled", false);
                 if (clear)
                     svg.selectAll("g").selectAll("*").remove();
                 
+                const size_scale = 1/(1 + timedag.length/250);
                 // How to draw edges
                 let line = d3.line()
-                    //.curve(d3.curveCatmullRom)
+                    .curve(d3.curveCatmullRom
+                        .alpha(0.8))
                     .x(d => d.x)
                     .y(d => d.y);
 
@@ -277,6 +289,7 @@
                 
                 // Plot edges
                 let edges = svg.select("g.edges")
+                    .attr('stroke-width', 3 * size_scale)
                   .selectAll('path')
                     .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
 
@@ -289,16 +302,17 @@
                 edges.exit().remove();
                 
                 let nodes = svg.select("g.nodes")
+                    .attr('stroke-width', 3 * size_scale)
                   .selectAll('circle')
                     .data(dag.descendants(), n => n.id);
                 
                 nodes.enter()
                   .append('circle')
                     .classed('dag-version', true)
-                    .attr('r', 10)
                     .attr('stroke', "#4e6069")
                     .attr("data-vid", ({id}) => id)
                   .merge(nodes)
+                    .attr('r', 10 * size_scale)
                     .attr('cx', ({x, y}) => x)
                     .attr('cy', ({x, y}) => y)
                     .classed("frozen", ({id}) => x(id).frozen)
@@ -308,7 +322,7 @@
                 nodes.exit().remove();
                 color_nodes();
 
-                const arrowhead = d3.symbol().type(d3.symbolTriangle).size(60);
+                const arrowhead = d3.symbol().type(d3.symbolTriangle).size(60 * size_scale);
                 let arrows = svg.select('g.arrows')
                   .selectAll('path')
                     .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
@@ -323,7 +337,7 @@
                         let [end, start] = data.points.reverse();
                         let dx = start.x - end.x;
                         let dy = start.y - end.y;
-                        let scale = 12 / Math.sqrt(dx * dx + dy * dy);
+                        let scale = size_scale * 12 / Math.sqrt(dx * dx + dy * dy);
                         // This is the angle of the last line segment
                         let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
                         return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
@@ -338,23 +352,25 @@
                 fissure_bars.enter()
                   .append('rect')
                     .classed('dag-select', true)
-                    .attr('x', -(dag_wo + 50))
+                    .attr('x', elw+30)
                     .attr('fill', f => colors[f.tag].color)
-                    .on('mouseover', d => {
+                    .on('mouseover click', function (d) {
                         s_fissure = d.tag;
+                        d3.selectAll('.dag-select')
+                            .classed("selected", false);
                         d3.select(d3.event.target)
-                            .attr('width', 50);
+                            .classed("selected", true);
                         setTimeout(() => color_nodes());
                     })
                     .on('mouseout', d => {
                         if (s_fissure === d.tag)
                             s_fissure = null;
                         d3.select(d3.event.target)
-                            .attr('width', 30);
+                            .classed("selected", false);
                         setTimeout(() => color_nodes());
                     })
                   .merge(fissure_bars)
-                    .attr('width', d => s_fissure == d.tag ? 50 : 30)
+                    .attr('width', 500)
                     .attr('height', elh/fissures.length)
                     .attr("y", (f, i) => elh/fissures.length * i);
 
@@ -362,22 +378,17 @@
                     
             }
 
+            function draw_dag_line(d) {
+                
+            }
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
                                  .id(d => d.id)
-                                 .distance(200))
+                                 .distance(200 * sim_scale))
                 .force("repel", d3.forceManyBody()
-                                   .strength(-1500)
-                                   .distanceMax(400))
+                                   .strength(-1500 * sim_scale)
+                                   .distanceMax(400 * sim_scale))
                 .force("center", d3.forceCenter(elw/2, elh/2));
-            
-            // Somewhat boring d3 boilerplate
-            const svg_ho = Math.max(0, 400 - elh);
-            const svg_wo = Math.max(0, 400 - elw);
-            const svg = d3.select("svg.network")
-                          .attr("width", elw)
-                          .attr("height", elh)
-                          .attr("viewBox", `${-svg_wo} ${-svg_ho} ${elw+svg_wo*2} ${elh+svg_ho*2}`);
             
             var link = svg.append("g")
                           .classed("links", true)
@@ -388,12 +399,14 @@
                         .selectAll("g");
 
             update_links(trial.peers);
+            update_fissures();
+            draw_dag(p_data);
 
             simulation.on("tick", () => {
                 // Move the nodes and lines
                 nodes.forEach(d => {
-                    d.x = Math.min(Math.max(10, d.x), elw-10);
-                    d.y = Math.min(Math.max(10, d.y), elh-10);
+                    d.x = Math.min(Math.max(15, d.x), elw-15);
+                    d.y = Math.min(Math.max(15, d.y), elh-15);
                 })
                 link
                   .selectAll("line")
@@ -404,6 +417,8 @@
                     .attr("y2", d => d.target.y);
                 node
                     .attr("transform", d => `translate(${d.x}, ${d.y})`);
+
+                draw_dag_line(p_data);
             });
             
             function dragstarted(d) {
@@ -426,7 +441,11 @@
             
             trial.on("tick", p => {
                 if (p_data.id == p.uid)
-                    requestAnimationFrame(() => {update_fissures(); draw_dag(p_data)});
+                    requestAnimationFrame(() => {
+                        update_fissures();
+                        draw_dag(p_data);
+                        draw_dag_line(p_data);
+                    });
             });
             function hoverOn(d) {
                 let clear = d != p_data;
@@ -439,7 +458,11 @@
                 d3.selectAll("svg.network .nodes > g")
                     .classed("selected", d => d.selected);
                 p_data = d;
-                requestAnimationFrame(() => {update_fissures(); draw_dag(d, clear)});
+                requestAnimationFrame(() => {
+                    update_fissures();
+                    draw_dag(d, clear);
+                    draw_dag_line(d);
+                });
             }
             
         }
@@ -451,168 +474,20 @@
             document.addEventListener("DOMContentLoaded", begin);
         }
         </script>
-        <style>
-            :root {
-                --off-white: #ddd;
-                --off-black: #222;
-                --n-controls: 3;
-            }
-            body {
-                padding: 0;
-                margin: 0;
-                padding-bottom: calc(var(--n-controls) * 22px);
-                position: absolute;
-                top: 0;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                overflow: hidden;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background: var(--off-black);
-            }
-            .controls {
-                position: absolute;
-                bottom: 10px;
-                right: 10px;
-                z-index: 10;
-                height: calc(var(--n-controls) * 22px);
-            }
-            .controls div {
-                display: flex;
-                justify-content: space-between;
-                opacity: 0.5;
-                transition: 0.15s opacity ease;
-                height: calc(100% / var(--n-controls));
-            }
-            .controls div:hover {
-                opacity: 1;
-            }
-            .controls label {
-                color: var(--off-white);
-                font-family: Roboto, sans-serif;
-                margin-right: 1ch;
-            }
-            .controls input {
-                cursor: pointer;
-            }
-
-            /* Network SVG Styling*/
-            /* Network line shadows */
-            svg.network .links > g > line:first-child {
-                stroke: rgba(30, 30, 30, 0.5);
-                stroke-width: 6;
-            }
-            svg.network .links > g > line:last-child {
-                stroke: var(--off-white);
-                stroke-width: 4;
-            }
-            svg.network .nodes > g > circle {
-                stroke-width: 3;
-                fill: #c8dcf0;
-                stroke: #786e60;
-                cursor: pointer;
-
-                animation-timing-function: cubic-bezier(.22,.61,.36,1);
-                animation-duration: 2s;
-            }
-            svg.network .nodes g.selected > circle {
-                stroke: #b525c2;
-            }
-            .edit-blip-1 {animation-name: edit-blip-1;}
-            .edit-blip-2 {animation-name: edit-blip-2;}
-            @keyframes edit-blip-1 {
-                from {fill: rgb(20, 100, 200);}
-                to {fill: #c8dcf0;}
-            }
-            @keyframes edit-blip-2 {
-                from {fill: rgb(20, 100, 200);}
-                to {fill: #c8dcf0;}
-            }
-            svg.network .fissure,
-            svg.network .fissure * {
-                cursor: default;
-            }
-            svg.network .fissure text.fissure-sign {
-                font-weight: bold;
-                font-family: sans-serif;
-                text-anchor: middle;
-                fill: white;
-                font-size: 14px;
-                -webkit-user-select: none;
-                -moz-user-select: none;
-                -ms-user-select: none;
-                user-select: none;
-            }
-
-            /* TimeDAG styling */
-            svg.dag.disabled {
-                filter: blur(2px) grayscale(85%) brightness(0.7);
-                pointer-events: none;
-            }
-            svg.dag .dag-line {
-                fill: none;
-                stroke-width: 3;
-                stroke: var(--off-white);
-            }
-            svg.dag .dag-arrow {
-                fill: var(--off-white);
-            }
-            svg.dag .dag-version {
-                fill: #dadae0;
-                stroke-width: 3;
-            }
-            svg.dag .dag-version.acked {
-                fill: #42c260;
-            }
-            svg.dag .dag-version.acked.frozen {
-                fill: #f7e136;
-            }
-            svg.dag .fissure-line {
-                stroke-width: 2;
-                stroke-opacity: 0.7;
-                fill: none;
-            }
-            svg.dag .fissure-fill {
-                fill-opacity: 0.3;
-            }
-            
-            @media screen and (max-aspect-ratio: 1/1) {
-                body {
-                    padding-bottom: 0;
-                }
-                body {
-                    flex-direction: column;
-                }
-                .controls {
-                    position: initial;
-                    width: 100%;
-                }
-                .controls div {
-                    padding-left: 5px;
-                    padding-right: 5px;
-                }
-            }
-            @media screen and (max-width: 400px) {
-                .controls label {
-                    font-size: 13px;
-                }
-            }
-        </style>
+        <link rel="stylesheet" href="vis-sim.css">
     </head>
     <body>
+        <svg class="network"></svg>
         <svg class="dag">
+            <g class="fissures"></g>
             <g class="edges"></g>
             <g class="nodes"></g>
             <g class="arrows"></g>
-            <g class="fissures"></g>
         </svg>
-        <svg class="network"></svg>
         <div class="controls">
             <div>
                 <label for="timing">Simulation Speed</label>
-                <input type="range" min="0" max="3" value="1" step="0.01" id="timing">
+                <input type="range" min="0.5" max="3" value="1.5" step="0.01" id="timing">
             </div>
             <div>
                 <label for="edit_prob">Edit rate</label>
