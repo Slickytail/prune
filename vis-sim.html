@@ -13,21 +13,36 @@
         <script src="./trial.js"></script>
         <script>
         var P = null;
-        var p_data = null;
+        const N = 6;
         function begin() {
             var nodes = [];
             var links = [];
+            var p_data = null;
             const elw = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
                 document.documentElement.clientWidth/2 : document.documentElement.clientWidth;
             const elh = (document.documentElement.clientWidth > document.documentElement.clientHeight) ?
                 document.documentElement.clientHeight - 70 : document.documentElement.clientHeight/2 - 35;
 
-            EDIT_PROB = document.getElementById('edit_prob').value;
-            CONNECT_PROB = document.getElementById('connect_prob').value;
-            TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
+            document.getElementById('edit_prob').oninput = () => {
+                const exp = -2 * Math.log(N)/Math.log(0.25);
+                console.log(exp);
+                EDIT_PROB = Math.pow(document.getElementById('edit_prob').value, exp);
+                console.log(EDIT_PROB)
+            };
+            document.getElementById('edit_prob').oninput();
+
+            document.getElementById('connect_prob').oninput = () => {
+                CONNECT_PROB = document.getElementById('connect_prob').value;
+            };
+            document.getElementById('connect_prob').oninput();
+
+            document.getElementById('timing').oninput = () => {
+                TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
+            };
+            document.getElementById('timing').oninput();
 
             var trial = new Trial({
-                peers: 6});
+                peers: N});
             trial.on("topology", update_links);
             trial.on("edit", rec_edit);
             trial.begin();
@@ -597,18 +612,15 @@
         <div class="controls">
             <div>
                 <label for="timing">Simulation Speed</label>
-                <input type="range" min="0.1" max="3" value="1" step="0.01" id="timing"
-                    oninput="TIMING = 1000*Math.pow(10, -this.value);">
+                <input type="range" min="0" max="3" value="1" step="0.01" id="timing">
             </div>
             <div>
                 <label for="edit_prob">Edit rate</label>
-                <input type="range" min="0" max="1" value="0.1" step="0.01" id="edit_prob"
-                    oninput="EDIT_PROB = this.value;">
+                <input type="range" min="0" max="1" value="0.25" step="0.01" id="edit_prob">
             </div>
             <div>
                 <label for="connect_prob">Disconnect and reconnect rate</label>
-                <input type="range" min="0" max="1" value="0.1" step="0.01" id="connect_prob"
-                    oninput="CONNECT_PROB = this.value;">
+                <input type="range" min="0" max="1" value="0.1" step="0.01" id="connect_prob">
             </div>
         </div>
     </body>
