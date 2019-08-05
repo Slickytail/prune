@@ -98,7 +98,6 @@ svg.network .fissure text.fissure-sign {
     -ms-user-select: none;
     user-select: none;
 }
-
 /* TimeDAG styling */
 svg.dag {
     border: 2px solid var(--light-gray);

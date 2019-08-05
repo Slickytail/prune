@@ -378,9 +378,6 @@
                     
             }
 
-            function draw_dag_line(d) {
-                
-            }
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
                                  .id(d => d.id)
@@ -444,7 +441,6 @@
                     requestAnimationFrame(() => {
                         update_fissures();
                         draw_dag(p_data);
-                        draw_dag_line(p_data);
                     });
             });
             function hoverOn(d) {
@@ -461,7 +457,6 @@
                 requestAnimationFrame(() => {
                     update_fissures();
                     draw_dag(d, clear);
-                    draw_dag_line(d);
                 });
             }
             
