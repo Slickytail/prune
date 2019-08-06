@@ -56,7 +56,9 @@ body svg {
 
 /* Network SVG Styling*/
 /* Network line shadows */
-
+svg.network {
+    z-index: 2;
+}
 svg.network .links > g > line:first-child {
     stroke: rgba(30, 30, 30, 0.5);
     stroke-width: 6;
@@ -164,7 +166,7 @@ svg.dag .dag-version.acked.frozen {
     transform-origin: right;
     flex: 1 1 auto;
     transition: 0.08s transform ease-out;
-    --fissure-select-width: 50px;
+    --fissure-select-width: 40px;
     --slide-ratio: 1.5
 }
 .fissures .dag-select.selected {
@@ -185,6 +187,10 @@ svg.dag .dag-version.acked.frozen {
         left: 5px;
         right: 5px;
         bottom: 5px;
+    }
+    .fissures {
+        top: calc(var(--n-controls) * 25px);
+        bottom: calc(var(--n-controls) * 25px);
     }
 }
 @media screen and (max-width: 400px) {

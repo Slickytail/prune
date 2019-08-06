@@ -31,7 +31,7 @@
             const elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
                   elh = Math.min((ratio > 1) ? bh : bh/2, 500);
 
-            d3.select("svg.dag").attr("viewBox", `-30 -30 ${elw+60} ${elh+60}`);
+            d3.select("svg.dag").attr("viewBox", `-20 -20 ${elw+40} ${elh+40}`);
             const svg = d3.select("svg.network")
                           .attr("viewBox", `-10 -10 ${elw+10} ${elh+10}`);
             const sim_scale = Math.min(1, Math.min(elw, elh)/500);
@@ -391,7 +391,6 @@
 
                 fissure_bars.exit().remove(); 
                 
-                
                 let t = svg.select(".node-label")
                     .text(`Peer #${p_data.index + 1}`);
                 
@@ -412,7 +411,7 @@
                     .attr("transform", function (d) {
                         let b = this.getBBox();
                         let scale = 1.15;
-                        return `translate(${elw - (b.width * scale) - 15}, 15) scale(${scale})`;
+                        return `translate(${elw - (b.width * scale)}, 0) scale(${scale})`;
                     });
                     
             }
