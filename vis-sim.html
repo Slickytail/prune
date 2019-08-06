@@ -31,9 +31,9 @@
             const elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
                   elh = Math.min((ratio > 1) ? bh : bh/2, 500);
 
-            d3.select("svg.dag").attr("viewBox", `-20 -20 ${elw+40} ${elh+40}`);
+            d3.select("svg.dag").attr("viewBox", `-30 -30 ${elw+60} ${elh+60}`);
             const svg = d3.select("svg.network")
-                          .attr("viewBox", `-10 -10 ${elw+10} ${elh+10}`);
+                          .attr("viewBox", `-20 -20 ${elw+40} ${elh+40}`);
             const sim_scale = Math.min(1, Math.min(elw, elh)/500);
             
             var nodes = [];

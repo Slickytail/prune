@@ -24,21 +24,26 @@ body svg {
 }
 .controls {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
+    bottom: 5px;
+    left: 5px;
     z-index: 10;
-    
+
+    opacity: 0.7;
     background-color: rgba(34, 34, 34, 0);
-    transition: 0.15s background-color ease;
+    transition: 0.15s background-color ease,
+                0.15s opacity ease;
+
     border-radius: 5px;
+    padding: 5px 10px;
 }
 .controls:hover {
-    background-color: rgba(34, 34, 34, 1);
+    background-color: rgba(50, 50, 50, 1);
+    opacity: 1;
 }
 .controls div {
     display: flex;
     justify-content: space-between;
-    opacity: 0.3;
+    opacity: 0.7;
     transition: 0.15s opacity ease;
 }
 .controls div:hover {
@@ -52,6 +57,9 @@ body svg {
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
+}
+.controls div:hover label {
+    color: white;
 }
 .controls label.input-name {
     margin-right: 1ch;
