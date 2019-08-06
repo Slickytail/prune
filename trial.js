@@ -107,7 +107,7 @@ class Trial {
         p.incoming.forEach((f, i, a) => a[i][2]--);
         for (let i = 0; i < BANDWIDTH
                      && p.incoming.length > 0
-                     && p.incoming[0][2] <= 0; 
+                     && p.incoming[0][2] <= 0;
                 i++) {
             p.incoming.shift()[1]()
         }

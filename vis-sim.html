@@ -416,22 +416,30 @@
                 const box = t.node().getBBox();
                 const pad_x = 7;
                 const pad_y = 1;
-                svg.select(".node-label-background")
-                    .attr("x", box.x - pad_x)
-                    .attr("y", box.y - pad_y)
-                    .attr("width", box.width + pad_x * 2)
-                    .attr("height", box.height + pad_y * 2)
-                    .attr("rx", pad_y + box.height/2);
 
-                svg.select(".node-label.after")
-                    .attr("x", box.x + box.width + pad_x + 3);
-                    
-                svg.select("g.node-text")
-                    .attr("transform", function (d) {
-                        let b = this.getBBox();
-                        let scale = 1.15;
-                        return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
-                    });
+                svg.select(".node-label.after2")
+                    .attr("y", box.y + box.height * 2)
+                    .attr("x", box.x)
+                    .text(`${dag.descendants().length} versions, ${dag.links().length} edges`);
+
+                if (force) {
+                    svg.select(".node-label-background")
+                        .attr("x", box.x - pad_x)
+                        .attr("y", box.y - pad_y)
+                        .attr("width", box.width + pad_x * 2)
+                        .attr("height", box.height + pad_y * 2)
+                        .attr("rx", pad_y + box.height/2);
+
+                    svg.select(".node-label.after1")
+                        .attr("x", box.x + box.width + pad_x + 3);
+
+                    svg.select("g.node-text")
+                        .attr("transform", function (d) {
+                            let b = this.getBBox();
+                            let scale = 1.0;
+                            return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
+                        });
+                }
                     
             }
 
@@ -491,16 +499,17 @@
                 d.fx = null;
                 d.fy = null;
             }
-            
+            let force = true;
             trial.on("tick", p => {
                 if (p_data.id == p.uid)
                     requestAnimationFrame(() => {
                         update_fissures();
-                        draw_dag(p_data);
+                        draw_dag(p_data, force);
                     });
             });
             function hoverOn(d) {
                 let clear = d != p_data;
+                force = false;
                 if (p_data)
                     p_data.selected = false;
                 
@@ -539,7 +548,8 @@
                     <rect class="node-label-background"/>
                     <text class="node-label"/>
                 </g>
-                <text class="node-label after">TimeDAG</text>
+                <text class="node-label after1">TimeDAG</text>
+                <text class="node-label after2"></text>
             </g>
         </svg>
         <div class="controls">
