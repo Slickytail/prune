@@ -45,6 +45,10 @@ body svg {
     color: var(--off-white);
     font-family: Roboto, sans-serif;
     margin-right: 1ch;
+    
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
 }
 .controls input {
     cursor: pointer;
@@ -99,10 +103,10 @@ g.selected .node-label-background {
 .node-label {
     font-family: Roboto, sans-serif;
     fill: white;
-    /*stroke: var(--off-black);
-    stroke-width: 4px;
-    font-weight: bold;
-    paint-order: stroke;*/
+    
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    user-select: none;
 }
 svg.network .fissure,
 svg.network .fissure * {
@@ -119,9 +123,12 @@ svg.network .fissure text.fissure-sign {
     user-select: none;
 }
 /* TimeDAG styling */
+svg.dag {
+    pointer-events: none;
+    z-index: 2;
+}
 svg.dag.disabled {
     filter: blur(2px) grayscale(85%) brightness(0.7);
-    pointer-events: none;
 }
 svg.dag .dag-line {
     fill: none;
@@ -141,19 +148,33 @@ svg.dag .dag-version.acked {
 svg.dag .dag-version.acked.frozen {
     fill: #f7e136;
 }
-svg.dag .dag-select {
-    transition: 0.08s transform ease-out;
-    --fissure-select-width: -50px;
-    transform: translateX(var(--fissure-select-width));
+.fissures {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: flex-end;
+
 }
-svg.dag .dag-select.selected {
-    transform: translateX(calc(var(--fissure-select-width) - 20px));
+.fissures .dag-select {
+    width: var(--fissure-select-width);
+    transform-origin: right;
+    flex: 1 1 auto;
+    transition: 0.08s transform ease-out;
+    --fissure-select-width: 50px;
+    --slide-ratio: 1.5
+}
+.fissures .dag-select.selected {
+    transform: scaleX(var(--slide-ratio));
 }
 @media screen and (any-pointer: fine) {
-    svg.dag .dag-select {
-        --fissure-select-width: -15px;
+    .fissures .dag-select {
+        --fissure-select-width: 20px;
+        --slide-ratio: 2;
     }
-    
 }
 
 @media screen and (max-aspect-ratio: 1/1) {

@@ -364,15 +364,14 @@
                 
                 arrows.exit().remove();
                 
-                let fissure_bars = svg.select('g.fissures')
-                  .selectAll('rect')
+                let fissure_bars = d3.select('.fissures')
+                  .selectAll('div')
                     .data(fissures, f => f.tag);
                 
                 fissure_bars.enter()
-                  .append('rect')
+                  .append('div')
                     .classed('dag-select', true)
-                    .attr('x', elw+30)
-                    .attr('fill', f => colors[f.tag].color)
+                    .style('background-color', f => colors[f.tag].color)
                     .on('mouseover click', function (d) {
                         s_fissure = d.tag;
                         d3.selectAll('.dag-select')
@@ -388,16 +387,11 @@
                             .classed("selected", false);
                         setTimeout(() => color_nodes());
                     })
-                  .merge(fissure_bars)
-                    .attr('width', 500)
-                    .attr('height', elh/fissures.length)
-                    .attr("y", (f, i) => elh/fissures.length * i);
+                  .merge(fissure_bars);
 
                 fissure_bars.exit().remove(); 
                 
-                svg.select("g.node-text")
-                    .attr("transform", `translate(15, 15)`);
-
+                
                 let t = svg.select(".node-label")
                     .text(`Peer #${p_data.index + 1}`);
                 
@@ -414,6 +408,12 @@
                 svg.select(".node-label.after")
                     .attr("x", box.x + box.width + pad_x + 3);
                     
+                svg.select("g.node-text")
+                    .attr("transform", function (d) {
+                        let b = this.getBBox();
+                        let scale = 1.15;
+                        return `translate(${elw - (b.width * scale) - 15}, 15) scale(${scale})`;
+                    });
                     
             }
 
@@ -510,9 +510,9 @@
         <link rel="stylesheet" href="vis-sim.css">
     </head>
     <body>
+        <div class="fissures"></div>
         <svg class="network"></svg>
         <svg class="dag">
-            <g class="fissures"></g>
             <g class="edges"></g>
             <g class="nodes"></g>
             <g class="arrows"></g>
