@@ -90,53 +90,63 @@ class Trial {
                 }
             }
         }
+
+        this.edit_counter = 0;
+        this.fis_counter = 0;
+
+        this.next_edit = 0;
+        this.next_net = 0;
     }
 
     _tick() {
+        this.next_net = (this.next_net + 1) % this.n_peers;
+        var p = this.peers_array[this.next_net];
 
-        var i = Math.floor(this.rand() * this.n_peers)
-        var p = this.peers_array[i]
-        
-        if (this.rand() < EDIT_PROB) {
-            if (this.rand() > CONNECT_PROB) {
-                if (p.letters_i >= p.letters.length) {
-                    p.letters_i = 0
-                }
-                var e = this.create_random_edit(p.s9, p.letters[p.letters_i++])
-                p.local_set(e.vid, e.parents, e.changes)
-                this.emit("edit", p.uid, e)
+        if (p.incoming.length > 0) {
+            p.incoming.shift()[1]()
+        }
+
+        this.edit_counter = (this.edit_counter + 1) % (1 / EDIT_PROB);
+        // make an edit
+        if (this.edit_counter < 1) {
+            // pick the next peer
+            let pe = this.peers_array[this.next_edit];
+            this.next_edit = (this.next_edit + 1) % this.n_peers;
+            // make a random edit
+            pe.letters_i = (pe.letters_i + 1) % pe.letters.length;
+            let e = this.create_random_edit(pe.s9, pe.letters[pe.letters_i]);
+            pe.local_set(e.vid, e.parents, e.changes);
+
+            this.emit("edit", pe.uid, e);
+        }
+
+        this.fis_counter = (this.fis_counter + 1) % (1 / CONNECT_PROB);
+        // make a disconnect or reconnect
+        if (this.fis_counter < 1) {
+            // pick a random other peer
+            let pf = p;
+            while (pf == p) {
+                pf = this.peers_array[Math.floor(this.rand() * this.n_peers)]
+            }
+            // if they're connected, disconnect them
+            if (p.peers[pf.uid]) {
+                p.disconnect(pf.uid)
+                p.incoming = p.incoming.filter(x => x[0] != pf.uid)
+                pf.disconnect(p.uid)
+                pf.incoming = pf.incoming.filter(x => x[0] != p.uid)
+            // if they aren't connected, connect them
             } else {
-                var other_p = p
-                while (other_p == p) {
-                    other_p = this.peers_array[Math.floor(this.rand() * this.n_peers)]
-                }
-                if (p.peers[other_p.uid]) {
-                    p.disconnect(other_p.uid)
-                    p.incoming = p.incoming.filter(x => x[0] != other_p.uid)
-                    other_p.disconnect(p.uid)
-                    other_p.incoming = other_p.incoming.filter(x => x[0] != p.uid)
-                } else {
-                    p.connect(other_p.uid)
-                    other_p.connect(p.uid)
-                }
-                this.emit("topology", this.peers)
+                p.connect(pf.uid)
+                pf.connect(p.uid)
             }
-        } else {
-            if (this.debug) console.log('process incoming')
-            var did_something = false
-            if (p.incoming.length > 0) {
-                did_something = true
-                p.incoming.shift()[1]()
-            }
-            if (!did_something) {
-                if (this.debug) console.log('did nothing')
-            }
+
+            this.emit("topology", this.peers)
         }
         
         if (this.debug)
             console.log('peer: ' + p.uid + ' -> ' + JSON.stringify(sync9_read(p.s9)))
 
-        this.emit("tick", p)
+        this.emit("tick", p);
         
         setTimeout(() => this._tick(), TIMING);
     }
