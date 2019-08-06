@@ -62,26 +62,47 @@ svg.network .links > g > line:last-child {
     stroke-width: 4;
 }
 svg.network .nodes > g > circle {
+    --edit-blip-color: #36322c;
+    --fill-color: #c8dcf0;
     stroke-width: 3;
-    fill: #c8dcf0;
+    fill: var(--fill-color);
     stroke: #786e60;
     cursor: pointer;
 
     animation-timing-function: cubic-bezier(.22,.61,.36,1);
     animation-duration: 2s;
+    
 }
 svg.network .nodes g.selected > circle {
-    stroke: #b525c2;
+    stroke: rgb(50, 130, 225);
 }
 .edit-blip-1 {animation-name: edit-blip-1;}
 .edit-blip-2 {animation-name: edit-blip-2;}
 @keyframes edit-blip-1 {
-    from {fill: rgb(20, 100, 200);}
-    to {fill: #c8dcf0;}
+    from { fill: var(--edit-blip-color); }
+    to   { fill: var(--fill-color);      }
 }
 @keyframes edit-blip-2 {
-    from {fill: rgb(20, 100, 200);}
-    to {fill: #c8dcf0;}
+    from { fill: var(--edit-blip-color); }
+    to   { fill: var(--fill-color);      }
+}
+g.selected .node-label-background {
+    fill: rgb(50, 130, 225);
+    opacity: 1;
+}
+.node-label-background {
+    fill: var(--off-black);
+    opacity: 0.5;
+    transition: 0.1s fill ease-out,
+                0.1s opacity ease-out;
+}
+.node-label {
+    font-family: Roboto, sans-serif;
+    fill: white;
+    /*stroke: var(--off-black);
+    stroke-width: 4px;
+    font-weight: bold;
+    paint-order: stroke;*/
 }
 svg.network .fissure,
 svg.network .fissure * {
@@ -95,13 +116,9 @@ svg.network .fissure text.fissure-sign {
     font-size: 14px;
     -webkit-user-select: none;
     -moz-user-select: none;
-    -ms-user-select: none;
     user-select: none;
 }
 /* TimeDAG styling */
-svg.dag {
-    border: 2px solid var(--light-gray);
-}
 svg.dag.disabled {
     filter: blur(2px) grayscale(85%) brightness(0.7);
     pointer-events: none;

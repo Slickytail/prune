@@ -142,12 +142,33 @@
                 // Remove deleted nodes
                 node.exit().remove();
                 // Add new nodes and draw circles on them
+
                 let enter = node.enter()
                   .append("g")
                   .attr("data-pid", d => d.id);
                 enter.append("circle")
-                    .attr("r", 10)
                     .classed("node", true)
+                    .attr("r", 10)
+                enter.append("rect")
+                    .classed("node-label-background", true)
+                enter.append("text")
+                    .classed("node-label", true)
+                    .attr("x", 13)
+                    .attr("y", -10)
+                    .text((d, i) => `Peer #${i+1}`);
+                enter.select("rect")
+                    .each(function (d) {
+                        // hopefully this.nextSibling will always be the text.
+                        var box = this.nextSibling.getBBox();
+                        const pad_x = 7;
+                        const pad_y = 1;
+                        d3.select(this)
+                            .attr("x", box.x - pad_x)
+                            .attr("y", box.y - pad_y)
+                            .attr("width", box.width + pad_x * 2)
+                            .attr("height", box.height + pad_y * 2)
+                            .attr("rx", pad_y + box.height/2);
+                    });
                 enter.call(d3.drag()
                         .on("start", dragstarted)
                         .on("drag", dragged)
@@ -233,13 +254,13 @@
                     .html(f => f.sign == "-" ? "&minus;" : "+")
                     .attr("y", 5);
                 fdots = fdots.merge(e)
-                    .attr("transform", (f, i) => `translate(${i * 18 + 20}, -10)`);
+                    .attr("transform", (f, i) => `translate(${i * 18 + 20}, 10)`);
             }
 
             var s_fissure = null;
             var draw_n = 0;
             /* Draw the dag for a peer d */
-            function draw_dag(d, clear) {
+            function draw_dag(d, force) {
                 // Get the timedag of the peer
                 let pe = trial.peers[d.id];
                 let timedag = Object.entries(pe.s9.T)
@@ -247,11 +268,11 @@
                         return {id: k, parentIds: Object.keys(v)};
                     });
                 
-                if (timedag.length > 500) {
+                if (timedag.length > 500 && !force) {
                     d3.select("svg.dag").classed("disabled", true);
                     return false;
                 }
-                if (++draw_n * 50 < timedag.length) {
+                if (++draw_n * 50 < timedag.length && !force) {
                     return false;
                 }
                 draw_n = 0;
@@ -269,8 +290,6 @@
 
                 let svg = d3.select("svg.dag")
                     .classed("disabled", false);
-                if (clear)
-                    svg.selectAll("g").selectAll("*").remove();
                 
                 const size_scale = 1/(1 + timedag.length/250);
                 // How to draw edges
@@ -375,6 +394,26 @@
                     .attr("y", (f, i) => elh/fissures.length * i);
 
                 fissure_bars.exit().remove(); 
+                
+                svg.select("g.node-text")
+                    .attr("transform", `translate(15, 15)`);
+
+                let t = svg.select(".node-label")
+                    .text(`Peer #${p_data.index + 1}`);
+                
+                const box = t.node().getBBox();
+                const pad_x = 7;
+                const pad_y = 1;
+                svg.select(".node-label-background")
+                    .attr("x", box.x - pad_x)
+                    .attr("y", box.y - pad_y)
+                    .attr("width", box.width + pad_x * 2)
+                    .attr("height", box.height + pad_y * 2)
+                    .attr("rx", pad_y + box.height/2);
+
+                svg.select(".node-label.after")
+                    .attr("x", box.x + box.width + pad_x + 3);
+                    
                     
             }
 
@@ -415,7 +454,6 @@
                 node
                     .attr("transform", d => `translate(${d.x}, ${d.y})`);
 
-                draw_dag_line(p_data);
             });
             
             function dragstarted(d) {
@@ -478,6 +516,13 @@
             <g class="edges"></g>
             <g class="nodes"></g>
             <g class="arrows"></g>
+            <g class="node-text">
+                <g class="selected">
+                    <rect class="node-label-background"/>
+                    <text class="node-label"/>
+                </g>
+                <text class="node-label after">TimeDAG</text>
+            </g>
         </svg>
         <div class="controls">
             <div>
