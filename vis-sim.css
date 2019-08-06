@@ -2,12 +2,10 @@
     --off-white: #ddd;
     --light-gray: rgb(177, 177, 177);
     --off-black: #222;
-    --n-controls: 3;
 }
 body {
     margin: 0;
     padding-top: 10px;
-    padding-bottom: calc(var(--n-controls) * 25px);
     padding-left: 10px;
     padding-right: 10px;
     position: absolute;
@@ -29,36 +27,50 @@ body svg {
     bottom: 10px;
     left: 10px;
     z-index: 10;
-    height: calc(var(--n-controls) * 22px);
+    
+    background-color: rgba(34, 34, 34, 0);
+    transition: 0.15s background-color ease;
+    border-radius: 5px;
+}
+.controls:hover {
+    background-color: rgba(34, 34, 34, 1);
 }
 .controls div {
     display: flex;
     justify-content: space-between;
-    opacity: 0.5;
+    opacity: 0.3;
     transition: 0.15s opacity ease;
-    height: calc(100% / var(--n-controls));
 }
 .controls div:hover {
     opacity: 1;
 }
-.controls label {
+.controls label{
+    width: 4.5ch;
     color: var(--off-white);
     font-family: Roboto, sans-serif;
-    margin-right: 1ch;
     
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
 }
+.controls label.input-name {
+    margin-right: 1ch;
+    min-width: 125px;
+}
 .controls input {
     cursor: pointer;
+    flex-grow: 1;
+}
+svg {
+    z-index: 2;
+    pointer-events: none;
+}
+svg.network .nodes .node-group {
+    pointer-events: painted;
 }
 
 /* Network SVG Styling*/
 /* Network line shadows */
-svg.network {
-    z-index: 2;
-}
 svg.network .links > g > line:first-child {
     stroke: rgba(30, 30, 30, 0.5);
     stroke-width: 6;
@@ -125,10 +137,6 @@ svg.network .fissure text.fissure-sign {
     user-select: none;
 }
 /* TimeDAG styling */
-svg.dag {
-    pointer-events: none;
-    z-index: 2;
-}
 svg.dag.disabled {
     filter: blur(2px) grayscale(85%) brightness(0.7);
 }
@@ -184,13 +192,7 @@ svg.dag .dag-version.acked.frozen {
         flex-direction: column;
     }
     .controls {
-        left: 5px;
-        right: 5px;
-        bottom: 5px;
-    }
-    .fissures {
-        top: calc(var(--n-controls) * 25px);
-        bottom: calc(var(--n-controls) * 25px);
+        position: static;
     }
 }
 @media screen and (max-width: 400px) {

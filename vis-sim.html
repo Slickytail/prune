@@ -40,21 +40,39 @@
             var links = [];
             var p_data = null;
 
-            document.getElementById('edit_prob').oninput = () => {
-                const exp = -1 * Math.log(N)/Math.log(0.25);
-                EDIT_PROB = Math.pow(document.getElementById('edit_prob').value, exp);
-            };
-            document.getElementById('edit_prob').oninput();
+            function bind_controls() {
+                document.getElementById('edit_prob').oninput = () => {
+                    const exp = -2 * Math.log(N)/Math.log(0.25);
+                    EDIT_PROB = Math.pow(document.getElementById('edit_prob').value, exp);
+                    document.getElementById('edit_prob-text').innerText = EDIT_PROB.toFixed(3);
+                };
+                document.getElementById('edit_prob').oninput();
 
-            document.getElementById('connect_prob').oninput = () => {
-                CONNECT_PROB = document.getElementById('connect_prob').value;
-            };
-            document.getElementById('connect_prob').oninput();
+                document.getElementById('connect_prob').oninput = () => {
+                    CONNECT_PROB = document.getElementById('connect_prob').value;
+                    document.getElementById('connect_prob-text').innerText = Number(CONNECT_PROB).toFixed(3);
+                };
+                document.getElementById('connect_prob').oninput();
 
-            document.getElementById('timing').oninput = () => {
-                TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
+                document.getElementById('timing').oninput = () => {
+                    TIMING = 1000*Math.pow(10, -document.getElementById('timing').value);
+                    document.getElementById('timing-text').innerText = `1/${TIMING.toFixed(0)}`;
+                };
+                document.getElementById('timing').oninput();
+
+                document.getElementById('latency').oninput = () => {
+                    LATENCY = document.getElementById('latency').value;
+                    document.getElementById('latency-text').innerText = Number(LATENCY).toFixed(0);
+                };
+                document.getElementById('latency').oninput();
+
+                document.getElementById('bandwidth').oninput = () => {
+                    BANDWIDTH = Math.floor(Math.pow(10, document.getElementById('bandwidth').value));
+                    document.getElementById('bandwidth-text').innerText = BANDWIDTH.toFixed(0);
+                };
+                document.getElementById('bandwidth').oninput();
             };
-            document.getElementById('timing').oninput();
+            bind_controls();
 
             var trial = new Trial({
                 peers: N});
@@ -145,6 +163,7 @@
 
                 let enter = node.enter()
                   .append("g")
+                  .classed("node-group", true)
                   .attr("data-pid", d => d.id);
                 enter.append("circle")
                     .classed("node", true)
@@ -411,7 +430,7 @@
                     .attr("transform", function (d) {
                         let b = this.getBBox();
                         let scale = 1.15;
-                        return `translate(${elw - (b.width * scale)}, 0) scale(${scale})`;
+                        return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
                     });
                     
             }
@@ -525,16 +544,29 @@
         </svg>
         <div class="controls">
             <div>
-                <label for="timing">Simulation Speed</label>
+                <label for="timing" class="input-name">Simulation Speed</label>
                 <input type="range" min="0.5" max="3" value="1.5" step="0.01" id="timing">
+                <label id="timing-text"></label>
             </div>
             <div>
-                <label for="edit_prob">Edit rate</label>
+                <label for="latency" class="input-name">Latency</label>
+                <input type="range" min="0" max="10" value="2" step="1" id="latency">
+                <label id="latency-text"></label>
+            </div>
+            <div>
+                <label for="bandwidth" class="input-name">Bandwidth</label>
+                <input type="range" min="0" max="2" value="0.5" step="0.01" id="bandwidth">
+                <label id="bandwidth-text"></label>
+            </div>
+            <div>
+                <label for="edit_prob" class="input-name">Edit rate</label>
                 <input type="range" min="0" max="1" value="0.25" step="0.01" id="edit_prob">
+                <label id="edit_prob-text"></label>
             </div>
             <div>
-                <label for="connect_prob">Disconnect and reconnect rate</label>
-                <input type="range" min="0" max="0.2" value="0.05" step="0.01" id="connect_prob">
+                <label for="connect_prob" class="input-name">Disconnect rate</label>
+                <input type="range" min="0" max="0.2" value="0.03" step="0.001" id="connect_prob">
+                <label id="connect_prob-text"></label>
             </div>
         </div>
     </body>

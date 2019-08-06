@@ -1,11 +1,13 @@
 var EDIT_PROB = 0.1;
 var CONNECT_PROB = 0.1;
+var BANDWIDTH = 1;
 var TIMING = 50;
+var LATENCY = 2;
+var DEBUG = false;
 
 class Trial {
 
     constructor(options) {
-        this.debug = options.debug || false;
         this.n_peers = options.peers || 4;
         this.seed = options.seed || "seed";
 
@@ -19,47 +21,47 @@ class Trial {
             ;(() => {
                 var p = sync9_create_peer({
                     get: (pid, id) => {
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' get ' + id)
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' get ' + id)
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' get ' + id)
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' get ' + id)
                             this.peers[pid].get(p.uid, id)
-                        }])
+                        }, LATENCY])
                     },
                     set: (pid, vid, parents, changes) => {
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' set ' + vid)
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' set ' + vid)
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' set ' + vid)
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' set ' + vid)
                             this.peers[pid].set(p.uid, vid, parents, changes)
-                        }])
+                        }, LATENCY])
                     },
                     set_multi: (pid, vs, fs) => {
                         fs = Object.assign({}, fs)
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' set_multi')
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' set_multi')
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' set_multi')
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' set_multi')
                             this.peers[pid].set_multi(p.uid, vs, fs)
-                        }])
+                        }, LATENCY])
                     },
                     ack: (pid, vid) => {
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' ack ' + vid)
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' ack ' + vid)
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' ack ' + vid)
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' ack ' + vid)
                             this.peers[pid].ack(p.uid, vid)
-                        }])
+                        }, LATENCY])
                     },
                     full_ack: (pid, vid) => {
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' full_ack ' + vid)
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' full_ack ' + vid)
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' full_ack ' + vid)
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' full_ack ' + vid)
                             this.peers[pid].full_ack(p.uid, vid)
-                        }])
+                        }, LATENCY])
                     },
                     fissure: (pid, fissure) => {
-                        if (this.debug) console.log(`SEND [${p.uid}]: ` + pid + ' fissure')
+                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' fissure')
                         this.peers[pid].incoming.push([p.uid, () => {
-                            if (this.debug) console.log(`RECV [${p.uid}]: ` + pid + ' fissure')
+                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' fissure')
                             this.peers[pid].fissure(p.uid, fissure)
-                        }])
+                        }, LATENCY])
                     }
                 })
                 p.incoming = []
@@ -102,7 +104,11 @@ class Trial {
         this.next_net = (this.next_net + 1) % this.n_peers;
         var p = this.peers_array[this.next_net];
 
-        if (p.incoming.length > 0) {
+        p.incoming.forEach((f, i, a) => a[i][2]--);
+        for (let i = 0; i < BANDWIDTH
+                     && p.incoming.length > 0
+                     && p.incoming[0][2] <= 0; 
+                i++) {
             p.incoming.shift()[1]()
         }
 
@@ -143,7 +149,7 @@ class Trial {
             this.emit("topology", this.peers)
         }
         
-        if (this.debug)
+        if (DEBUG)
             console.log('peer: ' + p.uid + ' -> ' + JSON.stringify(sync9_read(p.s9)))
 
         this.emit("tick", p);
