@@ -14,31 +14,37 @@ body {
     left: 0;
     right: 0;
     overflow: hidden;
-    display: flex;
-    justify-content: space-around;
-    align-items: stretch;
+
     background: var(--off-black);
+
+    display: flex;
+    justify-content: space-between;
+    align-items: stretch;
+    flex-wrap: wrap;
 }
-body svg {
-    flex: 1 1 auto;
+.network,
+.dag {
+    flex: auto;
+    width: 50%;
+    height: calc(80% - 5px);
 }
 .controls {
-    position: absolute;
-    bottom: 5px;
-    left: 5px;
-    z-index: 10;
+    order: 3;
+    height: 20%;
+    flex: 1;
+}
+.spacetree {
+    order: 4;
+    flex: 3;
+    height: 20%;
+}
 
-    opacity: 0.7;
-    background-color: rgba(34, 34, 34, 0);
-    transition: 0.15s background-color ease,
-                0.15s opacity ease;
-
+.controls {
     border-radius: 5px;
     padding: 5px 10px;
-}
-.controls:hover {
-    background-color: rgba(50, 50, 50, 1);
-    opacity: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
 }
 .controls div {
     display: flex;
@@ -67,7 +73,7 @@ body svg {
 }
 .controls input {
     cursor: pointer;
-    flex-grow: 1;
+    flex: 1 1 auto;
 }
 svg {
     z-index: 2;
@@ -150,15 +156,16 @@ svg.dag.disabled {
 }
 svg.dag .dag-line {
     fill: none;
-    /*stroke-width: 3;*/
     stroke: var(--light-gray);
 }
 svg.dag .dag-arrow {
     fill: var(--off-white);
 }
+svg.dag g.nodes {
+    stroke: #4e6069;
+}
 svg.dag .dag-version {
     fill: #dadae0;
-    /*stroke-width: 3;*/
 }
 svg.dag .dag-version.acked {
     fill: #42c260;
@@ -188,6 +195,36 @@ svg.dag .dag-version.acked.frozen {
 .fissures .dag-select.selected {
     transform: scaleX(var(--slide-ratio));
 }
+
+/* Spacetree */
+svg.spacetree g.links {
+    stroke: var(--off-white);
+    stroke-width: 3;
+    stroke-linecap: square;
+}
+
+svg.spacetree path.ins-box {
+    fill: var(--off-white);
+    stroke: #4e6069;
+    stroke-width: 3;
+}
+svg.spacetree text.ins-text {
+    fill: var(--off-black);
+    font-family: Roboto, sans-serif;
+}
+
+svg.spacetree .ins.deleted path.ins-box {
+    fill: #888;
+}
+svg.spacetree .ins line.strikethrough {
+    stroke: none;
+    fill: none;
+    stroke-width: 3;
+    stroke-linecap: square;
+}
+svg.spacetree .ins.deleted line.strikethrough {
+    stroke: red;
+}
 @media screen and (any-pointer: fine) {
     .fissures .dag-select {
         --fissure-select-width: 20px;
@@ -198,9 +235,21 @@ svg.dag .dag-version.acked.frozen {
 @media screen and (max-aspect-ratio: 1/1) {
     body {
         flex-direction: column;
+        flex-wrap: nowrap;
+    }
+    .dag,
+    .network {
+        width: 100%;
+        flex: 4;
     }
     .controls {
-        position: static;
+        order: 4;
+        flex: 1;
+        padding: none;
+    }
+    .spacetree {
+        order: 3;
+        flex: 2;
     }
 }
 @media screen and (max-width: 400px) {

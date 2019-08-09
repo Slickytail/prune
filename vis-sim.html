@@ -11,9 +11,13 @@
         <script src="./sync9.js"></script>
         <script src="./sync9_peer.js"></script>
         <script src="./trial.js"></script>
+        <script src="./render_spacetree.js"></script>
+        <script src="./render_dag.js"></script>
         <script>
         var P = null;
         const N = 6;
+        var elw;
+        var elh;
         function begin() {
             // Compute the size of SVG elements
             const body = document.getElementsByTagName('body')[0];
@@ -28,8 +32,8 @@
             
             const ratio = document.documentElement.clientWidth
                           / document.documentElement.clientHeight;
-            const elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
-                  elh = Math.min((ratio > 1) ? bh : bh/2, 500);
+            elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
+            elh = Math.min((ratio > 1) ? bh : bh/2, 500);
 
             d3.select("svg.dag").attr("viewBox", `-30 -30 ${elw+60} ${elh+60}`);
             const svg = d3.select("svg.network")
@@ -276,173 +280,6 @@
                     .attr("transform", (f, i) => `translate(${i * 18 + 20}, 10)`);
             }
 
-            var s_fissure = null;
-            var draw_n = 0;
-            /* Draw the dag for a peer d */
-            function draw_dag(d, force) {
-                // Get the timedag of the peer
-                let pe = trial.peers[d.id];
-                let timedag = Object.entries(pe.s9.T)
-                    .map(([k, v]) => {
-                        return {id: k, parentIds: Object.keys(v)};
-                    });
-                
-                if (timedag.length > 500 && !force) {
-                    d3.select("svg.dag").classed("disabled", true);
-                    return false;
-                }
-                if (++draw_n * 50 < timedag.length && !force) {
-                    return false;
-                }
-                draw_n = 0;
-
-                let x = pe.v_state();
-                let z = pe.f_state();
-
-                let dag = d3.dagStratify()(timedag);
-                let layout = d3.sugiyama()
-                    .size([elw, elh])
-                    .layering(d3.layeringLongestPath())
-                    .decross(d3.decrossTwoLayer())
-                    .coord(d3.coordCenter());
-                layout(dag);
-
-                let svg = d3.select("svg.dag")
-                    .classed("disabled", false);
-                
-                const size_scale = 1/(1 + timedag.length/250);
-                // How to draw edges
-                let line = d3.line()
-                    .curve(d3.curveCatmullRom
-                        .alpha(0.8))
-                    .x(d => d.x)
-                    .y(d => d.y);
-
-                let fissures = Object.values(pe.fissures).map(fis);
-                function color_nodes() {
-                    svg
-                      .selectAll('circle.dag-version')
-                        .attr('stroke', ({id}) => z(id)[s_fissure] ? colors[s_fissure].color : "#4e6069");
-                }
-                
-                // Plot edges
-                let edges = svg.select("g.edges")
-                    .attr('stroke-width', 3 * size_scale)
-                  .selectAll('path')
-                    .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
-
-                edges.enter()
-                  .append('path')
-                    .classed('dag-line', true)
-                  .merge(edges)
-                    .attr('d', ({ data }) => line(data.points));
-
-                edges.exit().remove();
-                
-                let nodes = svg.select("g.nodes")
-                    .attr('stroke-width', 3 * size_scale)
-                  .selectAll('circle')
-                    .data(dag.descendants(), n => n.id);
-                
-                nodes.enter()
-                  .append('circle')
-                    .classed('dag-version', true)
-                    .attr('stroke', "#4e6069")
-                    .attr("data-vid", ({id}) => id)
-                  .merge(nodes)
-                    .attr('r', 10 * size_scale)
-                    .attr('cx', ({x, y}) => x)
-                    .attr('cy', ({x, y}) => y)
-                    .classed("frozen", ({id}) => x(id).frozen)
-                    .classed("acked", ({id}) => x(id).acked)
-                    .classed("fissured", ({id}) => Object.keys(z(id)).length);
-
-                nodes.exit().remove();
-                color_nodes();
-
-                const arrowhead = d3.symbol().type(d3.symbolTriangle).size(60 * size_scale);
-                let arrows = svg.select('g.arrows')
-                  .selectAll('path')
-                    .data(dag.links(), l => `${l.source.id}-${l.target.id}`);
-                
-                arrows.enter()
-                  .append('path')
-                    .classed('dag-arrow', true)
-                    .attr('d', arrowhead)
-                  .merge(arrows)
-                    .attr('transform', ({data}) => {
-                        // Last two points from the data
-                        let [end, start] = data.points.reverse();
-                        let dx = start.x - end.x;
-                        let dy = start.y - end.y;
-                        let scale = size_scale * 12 / Math.sqrt(dx * dx + dy * dy);
-                        // This is the angle of the last line segment
-                        let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
-                        return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
-                    });
-                
-                arrows.exit().remove();
-                
-                let fissure_bars = d3.select('.fissures')
-                  .selectAll('div')
-                    .data(fissures, f => f.tag);
-                
-                fissure_bars.enter()
-                  .append('div')
-                    .classed('dag-select', true)
-                    .style('background-color', f => colors[f.tag].color)
-                    .on('mouseover click', function (d) {
-                        s_fissure = d.tag;
-                        d3.selectAll('.dag-select')
-                            .classed("selected", false);
-                        d3.select(d3.event.target)
-                            .classed("selected", true);
-                        setTimeout(() => color_nodes());
-                    })
-                    .on('mouseout', d => {
-                        if (s_fissure === d.tag)
-                            s_fissure = null;
-                        d3.select(d3.event.target)
-                            .classed("selected", false);
-                        setTimeout(() => color_nodes());
-                    })
-                  .merge(fissure_bars);
-
-                fissure_bars.exit().remove(); 
-                
-                let t = svg.select(".node-label")
-                    .text(`Peer #${p_data.index + 1}`);
-                
-                const box = t.node().getBBox();
-                const pad_x = 7;
-                const pad_y = 1;
-
-                svg.select(".node-label.after2")
-                    .attr("y", box.y + box.height * 2)
-                    .attr("x", box.x)
-                    .text(`${dag.descendants().length} versions, ${dag.links().length} edges`);
-
-                if (force) {
-                    svg.select(".node-label-background")
-                        .attr("x", box.x - pad_x)
-                        .attr("y", box.y - pad_y)
-                        .attr("width", box.width + pad_x * 2)
-                        .attr("height", box.height + pad_y * 2)
-                        .attr("rx", pad_y + box.height/2);
-
-                    svg.select(".node-label.after1")
-                        .attr("x", box.x + box.width + pad_x + 3);
-
-                    svg.select("g.node-text")
-                        .attr("transform", function (d) {
-                            let b = this.getBBox();
-                            let scale = 1.0;
-                            return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
-                        });
-                }
-                    
-            }
-
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
                                  .id(d => d.id)
@@ -462,7 +299,7 @@
 
             update_links(trial.peers);
             update_fissures();
-            draw_dag(p_data);
+            draw_dag(trial.peers[p_data.id], colors, p_data.index);
 
             simulation.on("tick", () => {
                 // Move the nodes and lines
@@ -504,7 +341,8 @@
                 if (p_data.id == p.uid)
                     requestAnimationFrame(() => {
                         update_fissures();
-                        draw_dag(p_data, force);
+                        draw_spacetree(trial.peers[p_data.id]);
+                        draw_dag(trial.peers[p_data.id], colors, p_data.index, force);
                     });
             });
             function hoverOn(d) {
@@ -521,7 +359,8 @@
                 p_data = d;
                 requestAnimationFrame(() => {
                     update_fissures();
-                    draw_dag(d, clear);
+                    draw_spacetree(trial.peers[d.id]);
+                    draw_dag(trial.peers[d.id], colors, p_data.index, clear);
                 });
             }
             
@@ -552,6 +391,11 @@
                 <text class="node-label after2"></text>
             </g>
         </svg>
+        <svg class="spacetree">
+            <g class="dummy-text"></g>
+            <g class="links"></g>
+            <g class="nodes"></g>
+        </svg>
         <div class="controls">
             <div>
                 <label for="timing" class="input-name">Simulation Speed</label>
@@ -575,7 +419,7 @@
             </div>
             <div>
                 <label for="connect_prob" class="input-name">Disconnect rate</label>
-                <input type="range" min="0" max="0.2" value="0.03" step="0.001" id="connect_prob">
+                <input type="range" min="0" max="0.2" value="0" step="0.001" id="connect_prob">
                 <label id="connect_prob-text"></label>
             </div>
         </div>
