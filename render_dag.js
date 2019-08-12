@@ -11,7 +11,7 @@ function fis(f) {
 var draw_n;
 var s_fissure = null;
 /* Draw the dag for a peer pe */
-function draw_dag(pe, colors, index, force) {
+function draw_dag(pe, colors, force) {
     // Get the timedag of the peer
     let timedag = Object.entries(pe.s9.T)
         .map(([k, v]) => {
@@ -140,37 +140,8 @@ function draw_dag(pe, colors, index, force) {
       .merge(fissure_bars);
 
     fissure_bars.exit().remove(); 
-    
-    /*
-    let t = svg.select(".node-label")
-        .text(`Peer #${index + 1}`);
-    
-    const box = t.node().getBBox();
-    const pad_x = 7;
-    const pad_y = 1;
 
-    svg.select(".node-label.after2")
-        .attr("y", box.y + box.height * 2)
-        .attr("x", box.x)
-        .text(`${dag.descendants().length} versions, ${dag.links().length} edges`);
-
-    if (force) {
-        svg.select(".node-label-background")
-            .attr("x", box.x - pad_x)
-            .attr("y", box.y - pad_y)
-            .attr("width", box.width + pad_x * 2)
-            .attr("height", box.height + pad_y * 2)
-            .attr("rx", pad_y + box.height/2);
-
-        svg.select(".node-label.after1")
-            .attr("x", box.x + box.width + pad_x + 3);
-
-        svg.select("g.node-text")
-            .attr("transform", function (d) {
-                let b = this.getBBox();
-                let scale = 1.0;
-                return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
-            });
-    } */
+    d3.select("#dag-versions").text(dag.descendants().length);
+    d3.select("#dag-edges").text(dag.links().length);
         
 }

@@ -275,8 +275,8 @@ function begin() {
 
     function update_panels(clear_dag) {
         update_fissures();
-        draw_dag(trial.peers[p_data.id], colors, p_data.index, clear_dag);
-        draw_spacetree(trial.peers[p_data.id], p_data.index);
+        draw_dag(trial.peers[p_data.id], colors, clear_dag);
+        draw_spacetree(trial.peers[p_data.id]);
     }
     const simulation = d3.forceSimulation()
         .force("link", d3.forceLink(links)
@@ -351,6 +351,8 @@ function begin() {
         
         d3.selectAll("svg.network .nodes > g")
             .classed("selected", d => d.selected);
+        d3.selectAll(".selected-peer")
+            .text(`Peer #${d.index + 1}`);
         p_data = d;
         requestAnimationFrame(() => {
             update_panels(clear);

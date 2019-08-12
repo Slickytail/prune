@@ -154,5 +154,6 @@ function draw_spacetree(peer, index) {
         .attr("x2", n => n.tx + n.tw)
         .attr("y2", n => n.ty)
 
+    d3.select("#spacetree-patches").text(nodes.length)
 
 }
