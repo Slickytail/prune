@@ -280,6 +280,11 @@
                     .attr("transform", (f, i) => `translate(${i * 18 + 20}, 10)`);
             }
 
+            function update_panels(clear_dag) {
+                update_fissures();
+                draw_dag(trial.peers[p_data.id], colors, p_data.index, clear_dag);
+                draw_spacetree(trial.peers[p_data.id], p_data.index);
+            }
             const simulation = d3.forceSimulation()
                 .force("link", d3.forceLink(links)
                                  .id(d => d.id)
@@ -298,8 +303,7 @@
                         .selectAll("g");
 
             update_links(trial.peers);
-            update_fissures();
-            draw_dag(trial.peers[p_data.id], colors, p_data.index);
+            update_panels();
 
             simulation.on("tick", () => {
                 // Move the nodes and lines
@@ -340,9 +344,7 @@
             trial.on("tick", p => {
                 if (p_data.id == p.uid)
                     requestAnimationFrame(() => {
-                        update_fissures();
-                        draw_spacetree(trial.peers[p_data.id]);
-                        draw_dag(trial.peers[p_data.id], colors, p_data.index, force);
+                        update_panels(force);
                     });
             });
             function hoverOn(d) {
@@ -358,9 +360,7 @@
                     .classed("selected", d => d.selected);
                 p_data = d;
                 requestAnimationFrame(() => {
-                    update_fissures();
-                    draw_spacetree(trial.peers[d.id]);
-                    draw_dag(trial.peers[d.id], colors, p_data.index, clear);
+                    update_panels(clear);
                 });
             }
             

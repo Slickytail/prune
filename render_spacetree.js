@@ -5,7 +5,7 @@ function layout(S9, svg) {
     var max_y = -Infinity;
 
     var x = 0;
-    var y_init = elh/2;
+    var y_init = 0;
 
     var nodes = [];
     var links = [];
@@ -76,13 +76,14 @@ function layout(S9, svg) {
     }
     var S = sync9_space_dag_get(S9.val.S, 0).S;
     helper(S, null, y_init, x, y_init, 0);
-    svg.attr("viewBox", `${-pad} ${min_y - pad} ${x+pad*2} ${max_y + pad}`);
-    return {nodes: nodes, links: links};
+    svg.attr("viewBox", `${-pad} ${min_y - pad} ${x+pad*2} ${max_y - min_y + pad*2}`);
+    return {nodes: nodes, links: links, x: x, y: min_y};
 }
-function draw_spacetree(peer) {
+last_index = -1;
+function draw_spacetree(peer, index) {
     const svg = d3.select("svg.spacetree");
 
-    const {nodes, links} = layout(peer.s9, svg);
+    const {nodes, links, x, y} = layout(peer.s9, svg);
 
     let l = svg.select("g.links")
       .selectAll("line.line")
@@ -121,8 +122,6 @@ function draw_spacetree(peer) {
     enter.merge(n)
         .attr("transform", n => `translate(${n.x}, ${n.y})`)
         .classed("deleted", n => n.deleted);
-    // Nodes: Exit
-    n.exit().remove();
     // Nodes: Update
     const cr = 35;
     n.select("path.ins-box")
@@ -144,4 +143,8 @@ function draw_spacetree(peer) {
         .attr("y1", n => n.ty)
         .attr("x2", n => n.end_cap ? n.w - 2 : n.w - 12)
         .attr("y2", n => n.ty)
+
+    // Nodes: Exit
+    n.exit().remove();
+
 }

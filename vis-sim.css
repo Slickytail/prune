@@ -5,9 +5,7 @@
 }
 body {
     margin: 0;
-    padding-top: 10px;
-    padding-left: 10px;
-    padding-right: 10px;
+    padding: 5px;
     position: absolute;
     top: 0;
     bottom: 0;
@@ -17,30 +15,29 @@ body {
 
     background: var(--off-black);
 
-    display: flex;
-    justify-content: space-between;
-    align-items: stretch;
-    flex-wrap: wrap;
+    display: grid;
+    grid: "network network timedag timedag" 4fr
+          "controls spacetree spacetree spacetree" 1fr
+          / 1fr 1fr 1fr 1fr;
 }
-.network,
+body > svg {
+    width: 100%;
+    height: 100%;
+}
+.network {
+    grid-area: network;
+}
 .dag {
-    flex: auto;
-    width: 50%;
-    height: calc(80% - 5px);
+    grid-area: timedag;
 }
 .controls {
-    order: 3;
-    height: 20%;
-    flex: 1;
+    grid-area: controls;
 }
 .spacetree {
-    order: 4;
-    flex: 3;
-    height: 20%;
+    grid-area: spacetree;
 }
 
 .controls {
-    border-radius: 5px;
     padding: 5px 10px;
     display: flex;
     flex-direction: column;
@@ -234,22 +231,11 @@ svg.spacetree .ins.deleted line.strikethrough {
 
 @media screen and (max-aspect-ratio: 1/1) {
     body {
-        flex-direction: column;
-        flex-wrap: nowrap;
-    }
-    .dag,
-    .network {
-        width: 100%;
-        flex: 4;
-    }
-    .controls {
-        order: 4;
-        flex: 1;
-        padding: none;
-    }
-    .spacetree {
-        order: 3;
-        flex: 2;
+        grid: "network" 2fr
+              "timedag" 2fr
+              "spacetree" 1fr
+              "controls" 1fr
+              / auto;
     }
 }
 @media screen and (max-width: 400px) {
