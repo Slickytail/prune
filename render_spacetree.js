@@ -111,6 +111,8 @@ function draw_spacetree(peer, index) {
     let node = svg.select("g.nodes")
       .selectAll("g.ins")
         .data(nodes, n => n.vid)
+    // Nodes: Exit
+    node.exit().remove();
     // Nodes: Enter
     let enter = node.enter()
       .append("g")
@@ -152,7 +154,5 @@ function draw_spacetree(peer, index) {
         .attr("x2", n => n.tx + n.tw)
         .attr("y2", n => n.ty)
 
-    // Nodes: Exit
-    node.exit().remove();
 
 }
