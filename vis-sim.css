@@ -63,10 +63,11 @@ body > svg {
 .controls #play-pause {
     color: var(--off-white);
     font-size: 30px;
-    font-family: Roboto, sans-serif;
     font-weight: bold;
     display: block;
     cursor: pointer;
+    grid-area: 1 / 4 / -1 / 5;
+    padding: 5px;
 }
 svg {
     z-index: 2;

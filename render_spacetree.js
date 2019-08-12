@@ -11,7 +11,6 @@ function getTextWidth(text) {
         }
         total += char_table[c] + kern;
     }
-    console.log(`Text ${text} has length ${total}`)
     return total;
 }
 
@@ -60,8 +59,8 @@ function layout(S9, svg) {
         nodes.push({
             vid: v,
 
-            gash: node.gash, // Left side concave
-            end_cap: node.end_cap, // Right side convex
+            gash: node.gash || false, // Left side concave
+            end_cap: node.end_cap || false, // Right side convex
             deleted: Boolean(Object.keys(node.deleted_by).length), // Draw red
 
             x: x,
@@ -93,30 +92,30 @@ function draw_spacetree(peer, index) {
 
     const {nodes, links, x, y} = layout(peer.s9, svg);
 
-    let l = svg.select("g.links")
+    let link = svg.select("g.links")
       .selectAll("line.line")
         .data(links, l => `${l.prev}-${l.next}`);
 
-    l.enter()
+    link.enter()
       .append("line")
         .classed("line", true)
-      .merge(l)
+      .merge(link)
         .attr("x1", l => l.x0)
         .attr("y1", l => l.y0)
         .attr("x2", l => l.x1)
         .attr("y2", l => l.y1)
     
-    l.exit().remove();
+    link.exit().remove();
 
     // Nodes: Data
-    let n = svg.select("g.nodes")
+    let node = svg.select("g.nodes")
       .selectAll("g.ins")
-        .data(nodes, l => l.vid)
+        .data(nodes, n => n.vid)
     // Nodes: Enter
-    let enter = n.enter()
+    let enter = node.enter()
       .append("g")
         .classed("ins", true)
-        .attr("data-vid", l => l.vid)
+        .attr("data-vid", n => n.vid)
    
     enter.append("path")
         .classed("ins-box", true);
@@ -127,12 +126,12 @@ function draw_spacetree(peer, index) {
     enter.append("line")
         .classed("strikethrough", true);
 
-    enter.merge(n)
+    node = node.merge(enter)
         .attr("transform", n => `translate(${n.x}, ${n.y})`)
         .classed("deleted", n => n.deleted);
     // Nodes: Update
     const cr = 35;
-    n.select("path.ins-box")
+    node.select("path.ins-box")
         .attr("d", n => 
             `M 0 0
              L ${n.w} 0
@@ -141,19 +140,19 @@ function draw_spacetree(peer, index) {
              A ${cr} ${cr} 0 0 ${n.gash ? 0 : 1} 0 0
              Z`);
 
-    n.select("text.ins-text")
+    node.select("text.ins-text")
         .attr("x", n => n.tx)
         .attr("y", n => n.ty + 6)
         .text(n => n.text)
         .attr("textLength", n => n.tw);
     
-    n.select("line.strikethrough")
+    node.select("line.strikethrough")
         .attr("x1", n => n.tx)
         .attr("y1", n => n.ty)
         .attr("x2", n => n.tx + n.tw)
         .attr("y2", n => n.ty)
 
     // Nodes: Exit
-    n.exit().remove();
+    node.exit().remove();
 
 }

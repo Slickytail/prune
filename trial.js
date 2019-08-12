@@ -14,7 +14,7 @@ class Trial {
         Math.randomSeed(this.seed);
         this.rand = () => Math.random();
         this.events = {};
-
+        this.isPaused = false;
         
         this.peers = {}
         for (var i = 0; i < this.n_peers; i++) {
@@ -100,7 +100,7 @@ class Trial {
         this.next_net = 0;
     }
 
-    _tick() {
+    tick() {
         this.next_net = (this.next_net + 1) % this.n_peers;
         var p = this.peers_array[this.next_net];
 
@@ -154,11 +154,28 @@ class Trial {
 
         this.emit("tick", p);
         
-        setTimeout(() => this._tick(), TIMING);
+        this._queue_tick();
     }
     
     begin() {
-        setTimeout(() => this._tick(), 0);
+        this._queue_tick();
+    }
+
+    set paused(val) {
+        // pause and cancel the next tick
+        if (val)
+            clearTimeout(this.timeout);
+        // resume
+        else if (this.isPaused) {
+            this.isPaused = val;
+            this._queue_tick();
+        }
+        this.isPaused = val;
+        
+    }
+    _queue_tick() {
+        if (!this.isPaused)
+            this.timeout = setTimeout(() => this.tick(), TIMING);
     }
 
     create_random_edit(s, letters) {

@@ -16,13 +16,13 @@ function begin() {
     
     const ratio = document.documentElement.clientWidth
                     / document.documentElement.clientHeight;
-    elw = Math.min((ratio > 1) ? bw/2 : bw, 500),
-    elh = Math.min((ratio > 1) ? bh : bh/2, 500);
+    elw = Math.min((ratio > 1) ? bw/2 : bw, 400),
+    elh = Math.min((ratio > 1) ? bh : bh/2, 400);
 
-    d3.select("svg.dag").attr("viewBox", `-30 -30 ${elw+60} ${elh+60}`);
+    d3.select("svg.dag").attr("viewBox", `-40 -40 ${elw+80} ${elh+80}`);
     const svg = d3.select("svg.network")
                     .attr("viewBox", `-20 -20 ${elw+40} ${elh+40}`);
-    const sim_scale = Math.min(1, Math.min(elw, elh)/500);
+    const sim_scale = Math.min(1, Math.min(elw, elh)/400);
     
     var nodes = [];
     var links = [];
@@ -59,6 +59,15 @@ function begin() {
             document.getElementById('bandwidth-text').innerText = BANDWIDTH.toFixed(0);
         };
         document.getElementById('bandwidth').oninput();
+
+        var paused = false;
+        document.getElementById('play-pause').onclick = function() {
+            paused = !paused;
+            d3.select(this)
+                .classed("fa-pause", !paused)
+                .classed("fa-play", paused);
+            trial.paused = paused;
+        };
     };
     bind_controls();
 
