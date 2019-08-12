@@ -1,3 +1,20 @@
+function getTextWidth(text) {
+    // Create a persistent character table if it doesn't exist
+    var char_table = getTextWidth.chars || (getTextWidth.chars = {});
+    var dummy = getTextWidth.node || (getTextWidth.node = document.getElementsByClassName("dummy-text")[0]);
+    const kern = 1;
+    var total = 0;
+    for (let c of text) {
+        if (!char_table[c]) {
+            dummy.textContent = c;
+            char_table[c] = dummy.getBBox().width;
+        }
+        total += char_table[c] + kern;
+    }
+    console.log(`Text ${text} has length ${total}`)
+    return total;
+}
+
 function layout(S9, svg) {
     const pad = 40;
 
@@ -9,21 +26,11 @@ function layout(S9, svg) {
 
     var nodes = [];
     var links = [];
-
-    var dummy = svg.select("g.dummy-text");
     function helper(node, prev_node, y, px, py, i) {
         max_y = Math.max(y, max_y);
         min_y = Math.min(y, min_y);
 
-        var t = dummy
-          .append("text")
-            .text(node.elems)
-            .classed("elems", true);
-        var w = t.node()
-          .getBBox()
-          .width;
-        var width = Math.max(w+1, 3);
-        t.remove();
+        var width = Math.max(getTextWidth(node.elems), 3);
         
         // Where the connecting line comes in
         var connect_x = x;
@@ -64,6 +71,7 @@ function layout(S9, svg) {
 
             tx: text_x - x,
             ty: 20,
+            tw: width,
             text: node.elems,
         })
         
@@ -136,12 +144,13 @@ function draw_spacetree(peer, index) {
     n.select("text.ins-text")
         .attr("x", n => n.tx)
         .attr("y", n => n.ty + 6)
-        .text(n => n.text);
-
+        .text(n => n.text)
+        .attr("textLength", n => n.tw);
+    
     n.select("line.strikethrough")
         .attr("x1", n => n.tx)
         .attr("y1", n => n.ty)
-        .attr("x2", n => n.end_cap ? n.w - 2 : n.w - 12)
+        .attr("x2", n => n.tx + n.tw)
         .attr("y2", n => n.ty)
 
     // Nodes: Exit

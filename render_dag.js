@@ -141,6 +141,7 @@ function draw_dag(pe, colors, index, force) {
 
     fissure_bars.exit().remove(); 
     
+    /*
     let t = svg.select(".node-label")
         .text(`Peer #${index + 1}`);
     
@@ -170,6 +171,6 @@ function draw_dag(pe, colors, index, force) {
                 let scale = 1.0;
                 return `translate(${elw - (b.width * scale)}, 5) scale(${scale})`;
             });
-    }
+    } */
         
 }
