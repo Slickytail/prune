@@ -19,7 +19,7 @@ function begin() {
     elw = Math.min((ratio > 1) ? bw/2 : bw, 400),
     elh = Math.min((ratio > 1) ? bh : bh/2, 400);
 
-    d3.select("svg.dag").attr("viewBox", `-40 -40 ${elw+80} ${elh+80}`);
+    d3.select("svg.dag").attr("viewBox", `-40 -50 ${elw+80} ${elh+100}`);
     const svg = d3.select("svg.network")
                     .attr("viewBox", `-20 -20 ${elw+40} ${elh+40}`);
     const sim_scale = Math.min(1, Math.min(elw, elh)/400);
