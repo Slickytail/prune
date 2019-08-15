@@ -83,7 +83,7 @@ function layout(S9, svg) {
     }
     var S = sync9_space_dag_get(S9.val.S, 0).S;
     helper(S, null, y_init, x, y_init, 0);
-    svg.attr("viewBox", `${-pad} ${min_y - pad} ${x+pad*2} ${max_y - min_y + pad*2}`);
+    svg.attr("viewBox", `${-pad} ${min_y - pad} ${x+pad*2} ${max_y - min_y + pad + 20}`);
     return {nodes: nodes, links: links, x: x, y: min_y};
 }
 last_index = -1;
