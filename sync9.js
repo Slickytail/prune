@@ -54,7 +54,7 @@ function sync9_space_dag_extract_versions(S, s9, is_anc) {
 
 
 
-function sync9_prune2(x, has_everyone_whos_seen_a_seen_b, has_everyone_whos_seen_a_seen_b_2) {
+function sync9_prune2(x, has_everyone_whos_seen_a_seen_b) {
     var seen_nodes = {}
     var did_something = true
     function rec(x) {
@@ -79,23 +79,15 @@ function sync9_prune2(x, has_everyone_whos_seen_a_seen_b, has_everyone_whos_seen
         }
     }
     while (did_something) {
+        seen_nodes = {}
         did_something = false
         rec(x)
     }
 
-    var visited = {}    
     var delete_us = {}
-    function f(vid) {
-        if (visited[vid]) return
-        visited[vid] = true
-        Object.keys(x.T[vid]).forEach(pid => {
-            if (has_everyone_whos_seen_a_seen_b_2(pid, vid) && !seen_nodes[pid]) {
-                delete_us[pid] = true
-            }
-            f(pid)
-        })
-    }
-    Object.keys(x.leaves).forEach(f)
+    Object.keys(x.T).forEach(x => {
+        if (!seen_nodes[x]) delete_us[x] = true
+    })
 
     var visited = {}
     var forwards = {}
@@ -809,11 +801,6 @@ function binarySearch(ar, compare_fn) {
     }
     return m;
 }
-
-
-
-
-
 
 function deep_equals(a, b) {
     if (typeof(a) != 'object' || typeof(b) != 'object') return a == b

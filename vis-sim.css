@@ -26,23 +26,15 @@ body > svg {
 }
 .network, .network-label {
     grid-area: network;
-    max-width: 50vw;
-    max-height: 80vh;
 }
 .dag, .dag-label {
     grid-area: timedag;
-    max-width: 50vw;
-    max-height: 80vh;
 }
 .controls {
     grid-area: controls;
-    max-width: 25vw;
-    max-height: 20vh;
 }
 .spacetree, .spacetree-label {
     grid-area: spacetree;
-    max-width: 75vw;
-    max-height: 20vh;
 }
 .label-container {
     padding: 5px;
@@ -261,14 +253,6 @@ svg.spacetree .dummy-text {
               "spacetree" 1fr
               "controls" 1fr
               / auto;
-    }
-    .network, .dag {
-        max-width: 100vw;
-        max-height: 33vh;
-    }
-    .controls, .spacetree {
-        max-width: 100vw;
-        max-height: 20vh;
     }
     .controls input {
         height: 10px;

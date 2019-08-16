@@ -19,51 +19,35 @@ class Trial {
         this.peers = {}
         for (var i = 0; i < this.n_peers; i++) {
             ;(() => {
-                var p = sync9_create_peer({
-                    get: (pid, id) => {
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' get ' + id)
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' get ' + id)
-                            this.peers[pid].get(p.uid, id)
-                        }, LATENCY])
-                    },
-                    set: (pid, vid, parents, changes) => {
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' set ' + vid)
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' set ' + vid)
-                            this.peers[pid].set(p.uid, vid, parents, changes)
-                        }, LATENCY])
-                    },
-                    set_multi: (pid, vs, fs) => {
-                        fs = Object.assign({}, fs)
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' set_multi')
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' set_multi')
-                            this.peers[pid].set_multi(p.uid, vs, fs)
-                        }, LATENCY])
-                    },
-                    ack: (pid, vid) => {
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' ack ' + vid)
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' ack ' + vid)
-                            this.peers[pid].ack(p.uid, vid)
-                        }, LATENCY])
-                    },
-                    full_ack: (pid, vid) => {
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' full_ack ' + vid)
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' full_ack ' + vid)
-                            this.peers[pid].full_ack(p.uid, vid)
-                        }, LATENCY])
-                    },
-                    fissure: (pid, fissure) => {
-                        if (DEBUG) console.log(`SEND [${p.uid}]: ` + pid + ' fissure')
-                        this.peers[pid].incoming.push([p.uid, () => {
-                            if (DEBUG) console.log(`RECV [${p.uid}]: ` + pid + ' fissure')
-                            this.peers[pid].fissure(p.uid, fissure)
+                var p = null
+                var m = {}
+                var def_func = (key) => {
+                    m[key] = (a, b, c, d, e, f) => {
+                        if (!p.peers[a]) {
+                            throw 'you cannot talk to them!'
+                        }
+                        a = a && JSON.parse(JSON.stringify(a))
+                        b = b && JSON.parse(JSON.stringify(b))
+                        c = c && JSON.parse(JSON.stringify(c))
+                        d = d && JSON.parse(JSON.stringify(d))
+                        e = e && JSON.parse(JSON.stringify(e))
+                        f = f && JSON.parse(JSON.stringify(f))
+                        this.peers[a].incoming.push([p.uid, () => {
+                            this.peers[a][key](p.uid, b, c, d, e, f)
                         }, LATENCY])
                     }
-                })
+                }
+                Object.keys({
+                    get: true,
+                    init: true,
+                    init_ack: true,
+                    set: true,
+                    set_multi: true,
+                    ack: true,
+                    full_ack: true,
+                    fissure: true
+                }).forEach(def_func)
+                p = sync9_create_peer(m)
                 p.incoming = []
                 this.peers[p.uid] = p
                 
@@ -73,8 +57,14 @@ class Trial {
                         p.letters += String.fromCharCode(12032 + ii)
                     }
                     p.letters_i = 0
-                } else {
+                } else if (i == 1) {
                     p.letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+                    for (var ii = 0; ii < 100; ii++) {
+                        p.letters += String.fromCharCode(12032 + 100 + ii)
+                    }
+                    p.letters_i = 0
+                } else {
+                    p.letters = ''
                     for (var ii = 0; ii < 100; ii++) {
                         p.letters += String.fromCharCode(12032 + 100 + ii)
                     }

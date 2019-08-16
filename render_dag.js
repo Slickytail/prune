@@ -116,11 +116,13 @@ function draw_dag(pe, colors, force) {
     
     let fissure_bars = d3.select('.fissures')
       .selectAll('div')
-        .data(fissures, f => f.tag);
+        .data(fissures, f => f.tag+f.sign);
     
     fissure_bars.enter()
       .append('div')
         .classed('dag-select', true)
+        .classed('dag-plus', f => f.sign == "+")
+        .classed('dag-minus', f => f.sign == "-")
         .style('background-color', f => colors[f.tag].color)
         .on('mouseover click', function (d) {
             s_fissure = d.tag;
