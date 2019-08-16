@@ -196,15 +196,30 @@ svg.dag .dag-version.acked.frozen {
 
 }
 .fissures .dag-select {
-    width: var(--fissure-select-width);
-    transform-origin: right;
-    flex: 1 1 auto;
+    width: calc(var(--fissure-select-width) + 20px);
+    flex: 1;
+    transform: translateX(20px);
     transition: 0.08s transform ease-out;
     --fissure-select-width: 40px;
-    --slide-ratio: 1.5
+    display: flex;
+    align-items: center;
 }
 .fissures .dag-select.selected {
-    transform: scaleX(var(--slide-ratio));
+    transform: translateX(0px);
+}
+.dag-select::after {
+    font-weight: bold;
+    font-family: Roboto, sans-serif;
+    color: var(--off-white);
+    width: var(--fissure-select-width);
+    text-align: center;
+    text-shadow: 0px 0px 5px black;
+}
+.dag-select.dag-plus::after {
+    content: '+';
+}
+.dag-select.dag-minus::after {
+    content: '\2212';
 }
 
 /* Spacetree */
@@ -242,7 +257,6 @@ svg.spacetree .dummy-text {
 @media screen and (any-pointer: fine) {
     .fissures .dag-select {
         --fissure-select-width: 20px;
-        --slide-ratio: 2;
     }
 }
 
