@@ -66,7 +66,7 @@ function draw_dag(pe, colors, force) {
       .append('path')
         .classed('dag-line', true)
       .merge(edges)
-        .attr('d', ({ data }) => line(data.points));
+        .attr('d', ({ data }) => line([data.points[0], data.points[data.points.length-1]]));
 
     edges.exit().remove();
     
@@ -103,12 +103,13 @@ function draw_dag(pe, colors, force) {
       .merge(arrows)
         .attr('transform', ({data}) => {
             // Last two points from the data
-            let [end, start] = data.points.reverse();
-            let dx = start.x - end.x;
-            let dy = start.y - end.y;
-            let scale = size_scale * 12 / Math.sqrt(dx * dx + dy * dy);
-            // This is the angle of the last line segment
-            let angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
+            let start = data.points[0],
+                end = data.points[data.points.length-1],
+                dx = start.x - end.x,
+                dy = start.y - end.y,
+                scale = size_scale * 12 / Math.sqrt(dx * dx + dy * dy),
+                // This is the angle of the last line segment
+                angle = Math.atan2(-dy, -dx) * 180 / Math.PI + 90;
             return `translate(${end.x + dx * scale}, ${end.y + dy * scale}) rotate(${angle})`;
         });
     
